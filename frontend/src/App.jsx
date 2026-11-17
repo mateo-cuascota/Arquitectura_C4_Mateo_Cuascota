@@ -1,220 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  consultarPuntosLicencia, estadoAnt, estadoSri, obtenerVehiculo, verificarContribuyente,
+  configurarDemo, consultarPuntosLicencia, estadoAnt, estadoSri, obtenerVehiculo, verificarContribuyente,
 } from './api.js';
+import {
+  BarraEstado, Confeti, Dato, FlujoCache, FondoAurora, GaugePuntos, PanelDemo, Placa, Skeleton, Stepper,
+  Tarjeta, Toasts, formatearFecha, iniciales,
+} from './componentes.jsx';
 
 const ORIGEN = {
   ANT: { label: 'En vivo desde la ANT', icon: '⚡', clase: 'ok' },
-  CACHE: { label: 'Desde caché (consulta reciente)', icon: '🗄️', clase: 'info' },
+  CACHE: { label: 'Desde la caché (consulta reciente)', icon: '🗄️', clase: 'info' },
   CACHE_RESPALDO: { label: 'Caché de respaldo · ANT no disponible', icon: '🛟', clase: 'warn' },
 };
 
-const PASOS = ['Usuario', 'Contribuyente', 'Licencia', 'Vehículo'];
-
-function formatearFecha(valor) {
-  if (!valor) return null;
-  const m = String(valor).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : valor;
-}
-
-function iniciales(nombre = '') {
-  const p = nombre.trim().split(/\s+/);
-  return ((p[2]?.[0] ?? p[0]?.[0] ?? '') + (p[0]?.[0] ?? '')).toUpperCase() || '?';
-}
-
-function Dato({ icon, label, value }) {
-  if (value === null || value === undefined || value === '') return null;
-  return (
-    <div className="dato">
-      <span className="dato-icon">{icon}</span>
-      <div>
-        <span className="dato-label">{label}</span>
-        <strong className="dato-valor">{String(value)}</strong>
-      </div>
-    </div>
-  );
-}
-
-function Tarjeta({ paso, icon, titulo, subtitulo, children, acento }) {
-  return (
-    <section className={`card fade-up ${acento ?? ''}`}>
-      <header className="card-head">
-        <div className="card-icon">{icon}</div>
-        <div>
-          <span className="card-paso">Paso {paso}</span>
-          <h2>{titulo}</h2>
-          {subtitulo && <p>{subtitulo}</p>}
-        </div>
-      </header>
-      {children}
-    </section>
-  );
-}
-
-function Stepper({ actual }) {
-  return (
-    <ol className="stepper">
-      {PASOS.map((p, i) => (
-        <li key={p} className={i < actual ? 'hecho' : i === actual ? 'activo' : ''}>
-          <span className="bolita">{i < actual ? '✓' : i + 1}</span>
-          <span className="paso-nombre">{p}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function Skeleton({ filas = 3 }) {
-  return (
-    <div className="skeleton">
-      {Array.from({ length: filas }).map((_, i) => <div key={i} className="sk-linea" />)}
-    </div>
-  );
-}
-
-function GaugePuntos({ puntos }) {
-  const max = 30;
-  const valor = puntos ?? 0;
-  const r = 70;
-  const circ = 2 * Math.PI * r;
-  const color = valor > 20 ? '#16a34a' : valor > 10 ? '#f59e0b' : '#dc2626';
-  return (
-    <div className="gauge">
-      <svg viewBox="0 0 180 180" width="180" height="180">
-        <circle cx="90" cy="90" r={r} className="gauge-fondo" />
-        <circle cx="90" cy="90" r={r} className="gauge-valor" stroke={color}
-                strokeDasharray={circ} strokeDashoffset={circ * (1 - valor / max)} />
-      </svg>
-      <div className="gauge-texto">
-        <strong style={{ color }}>{puntos ?? '—'}</strong>
-        <span>de {max} puntos</span>
-      </div>
-    </div>
-  );
-}
-
-function Placa({ numero }) {
-  return (
-    <div className="placa">
-      <span className="placa-banda">ECUADOR</span>
-      <span className="placa-numero">{numero}</span>
-    </div>
-  );
-}
-
-const CIRCUITO = {
-  CLOSED: { texto: 'cerrado', clase: 'ok' },
-  HALF_OPEN: { texto: 'semiabierto', clase: 'warn' },
-  OPEN: { texto: 'abierto', clase: 'mal' },
+const TIPOS = {
+  cedula: { largo: 10, patron: '\\d{10}', ejemplo: '1712345678', ayuda: '10 dígitos' },
+  ruc: { largo: 13, patron: '\\d{10}001', ejemplo: '1712345678001', ayuda: '13 dígitos terminados en 001' },
 };
-
-function Indicador({ estado, etiqueta, detalle }) {
-  return (
-    <span className={`indicador ind-${estado}`} title={detalle}>
-      <i className="punto" />
-      {etiqueta}
-    </span>
-  );
-}
-
-function BarraEstado({ sri, ant }) {
-  const antOk = ant && ant.ultimaRespuestaAnt && (!ant.ultimoFalloAnt || ant.ultimaRespuestaAnt > ant.ultimoFalloAnt);
-  const antEstado = !ant ? 'off' : antOk ? 'ok' : ant.fallosAnt > 0 ? 'mal' : 'warn';
-  const circuito = ant ? CIRCUITO[ant.circuitoAnt] ?? CIRCUITO.CLOSED : null;
-  return (
-    <div className="barra-estado">
-      <Indicador estado={!sri ? 'off' : sri.sriDisponible ? 'ok' : 'mal'}
-                 etiqueta={!sri ? 'SRI · sin conexión' : sri.sriDisponible ? `SRI en línea · ${sri.latenciaMs} ms` : 'SRI no responde'} />
-      <Indicador estado={antEstado}
-                 etiqueta={!ant ? 'ANT · servicio apagado' : antOk ? 'ANT en línea' : ant.fallosAnt > 0 ? 'ANT caída' : 'ANT sin consultar'}
-                 detalle={ant?.ultimoError ?? ''} />
-      {circuito && <Indicador estado={circuito.clase} etiqueta={`Circuit breaker ${circuito.texto}`} />}
-      <Indicador estado={!ant ? 'off' : ant.redisConectado ? 'ok' : 'mal'}
-                 etiqueta={!ant ? 'Caché · sin datos' : ant.redisConectado
-                   ? `Caché Redis · ${ant.consultasEnCache} guardada(s) · ${ant.consultasPendientes} en cola`
-                   : 'Caché Redis desconectada'} />
-    </div>
-  );
-}
-
-function escenarioCache(licencia, errorLicencia, cargando) {
-  if (cargando) return { activo: 'cargando', pasos: [1] };
-  if (licencia?.origen === 'CACHE') return { activo: 'cache', pasos: [1] };
-  if (licencia?.origen === 'ANT') return { activo: 'ant', pasos: [1, 2, 3] };
-  if (licencia?.origen === 'CACHE_RESPALDO') return { activo: 'respaldo', pasos: [1, 2, 4] };
-  if (errorLicencia) return { activo: 'cola', pasos: [1, 2, 5] };
-  return { activo: 'inactivo', pasos: [] };
-}
-
-const PASOS_CACHE = [
-  [1, '🔎', 'Buscar en Redis', 'Si hay una copia de menos de 30 min se responde desde la caché.'],
-  [2, '📡', 'Consultar la ANT', 'Con Retry (2 intentos) y Circuit Breaker para no saturar el portal.'],
-  [3, '💾', 'Guardar y leer de la caché', 'Cada respuesta adecuada se guarda (7 días) y se devuelve desde Redis.'],
-  [4, '🛟', 'Respaldo', 'Si la ANT falla se devuelve la última copia válida guardada.'],
-  [5, '⏳', 'Cola y reintento', 'Sin copia: la consulta queda en cola y se reintenta cada 2 min.'],
-];
-
-function FlujoCache({ licencia, errorLicencia, cargando, ant }) {
-  const { activo, pasos } = escenarioCache(licencia, errorLicencia, cargando);
-  const antMal = activo === 'respaldo' || activo === 'cola';
-  const redisLeido = ['cache', 'respaldo', 'ant'].includes(activo);
-  return (
-    <section className="card fade-up acento-violeta">
-      <header className="card-head">
-        <div className="card-icon">🧠</div>
-        <div>
-          <span className="card-paso">Arquitectura en vivo</span>
-          <h2>¿De dónde salió la información de la licencia?</h2>
-          <p>Patrón Cache-Aside con respaldo + Circuit Breaker sobre Redis en la nube.</p>
-        </div>
-      </header>
-
-      <div className="flujo">
-        <div className="nodo activo"><span>🖥️</span>Web App<small>React</small></div>
-        <div className="flecha activo">→</div>
-        <div className={`nodo ${activo !== 'inactivo' ? 'activo' : ''}`}><span>☕</span>ANT Service<small>Spring Boot</small></div>
-        <div className="ramas">
-          <div className="rama">
-            <div className={`flecha ${redisLeido ? 'activo' : activo === 'cola' ? 'falla' : ''}`}>↔</div>
-            <div className={`nodo ${redisLeido ? 'activo verde' : activo === 'cola' ? 'falla' : ''}`}>
-              <span>🗄️</span>Redis Cloud<small>{activo === 'cola' ? 'sin copia aún' : 'Upstash'}</small>
-            </div>
-          </div>
-          <div className="rama">
-            <div className={`flecha ${activo === 'ant' ? 'activo' : antMal ? 'falla' : ''}`}>{antMal ? '✕' : '→'}</div>
-            <div className={`nodo ${activo === 'ant' ? 'activo verde' : antMal ? 'falla' : ''}`}>
-              <span>🏛️</span>Portal ANT<small>{antMal ? 'no responde' : 'consultaweb'}</small>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <ol className="pasos-cache">
-        {PASOS_CACHE.map(([n, icono, titulo, texto]) => (
-          <li key={n} className={pasos.includes(n) ? (n === pasos[pasos.length - 1] ? 'actual' : 'hecho') : ''}>
-            <span className="pc-icono">{icono}</span>
-            <div><strong>{titulo}</strong><p>{texto}</p></div>
-          </li>
-        ))}
-      </ol>
-
-      {ant && (
-        <div className="metricas">
-          <div><strong>{ant.respuestasAnt}</strong><span>respuestas de la ANT</span></div>
-          <div><strong>{ant.respuestasCache}</strong><span>desde caché</span></div>
-          <div><strong>{ant.respuestasRespaldo}</strong><span>desde respaldo</span></div>
-          <div><strong>{ant.fallosAnt}</strong><span>fallos de la ANT</span></div>
-          <div><strong>{ant.consultasEnCache}</strong><span>consultas guardadas</span></div>
-          <div><strong>{ant.consultasPendientes}</strong><span>en cola</span></div>
-        </div>
-      )}
-    </section>
-  );
-}
 
 export default function App() {
   const [email, setEmail] = useState('');
-  const [ruc, setRuc] = useState('');
+  const [tipo, setTipo] = useState('cedula');
+  const [identificacion, setIdentificacion] = useState('');
   const [placa, setPlaca] = useState('');
 
   const [persona, setPersona] = useState(null);
@@ -226,15 +33,30 @@ export default function App() {
   const [error, setError] = useState('');
   const [errorVehiculo, setErrorVehiculo] = useState('');
   const [errorLicencia, setErrorLicencia] = useState('');
-
   const [segundos, setSegundos] = useState(0);
+
   const [estado, setEstado] = useState({ sri: null, ant: null });
   const [tema, setTema] = useState(() => localStorage.getItem('tema') ?? 'claro');
+  const [toasts, setToasts] = useState([]);
+  const [confeti, setConfeti] = useState(0);
+  const resultadosRef = useRef(null);
+
+  const pasoActual = vehiculo ? 4 : persona ? (licencia || errorLicencia ? 3 : 2) : 0;
+
+  /* ---------------------------------------------------------------- tema y notificaciones */
 
   useEffect(() => {
     document.documentElement.dataset.tema = tema;
     localStorage.setItem('tema', tema);
   }, [tema]);
+
+  function avisar(tipoToast, icono, titulo, texto) {
+    const id = Date.now() + Math.random();
+    setToasts((t) => [...t, { id, tipo: tipoToast, icono, titulo, texto }].slice(-4));
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4500);
+  }
+
+  /* ---------------------------------------------------------------- estado del sistema */
 
   async function actualizarEstado() {
     const [sri, ant] = await Promise.allSettled([estadoSri(), estadoAnt()]);
@@ -244,16 +66,26 @@ export default function App() {
     });
   }
 
-  // Panel de estado: se actualiza cada 15 s y después de cada consulta de licencia.
   useEffect(() => {
     actualizarEstado();
-    const t = setInterval(actualizarEstado, 15000);
+    const t = setInterval(actualizarEstado, 5000);
     return () => clearInterval(t);
   }, []);
 
-  const pasoActual = vehiculo ? 4 : persona ? (licencia || errorLicencia ? 3 : 2) : 0;
+  async function cambiarDemo(activo, antCaida) {
+    try {
+      await configurarDemo(activo, antCaida);
+      await actualizarEstado();
+      if (!activo) avisar('info', '🏛️', 'Modo demostración desactivado', 'Se vuelve a consultar el portal real de la ANT.');
+      else if (antCaida) avisar('warn', '💥', 'ANT simulada caída', 'Responde 502. La consulta usará la caché de respaldo.');
+      else avisar('ok', '🧪', 'Simulador de la ANT activo', 'Las respuestas se guardan en Redis con el prefijo demo:.');
+    } catch (e) {
+      avisar('error', '⛔', 'No se pudo cambiar el modo demo', e.message);
+    }
+  }
 
-  // Si la ANT está caída, se reintenta automáticamente cada 30 s mientras la página esté abierta.
+  /* ---------------------------------------------------------------- reintento automático */
+
   useEffect(() => {
     if (!errorLicencia || !persona) return undefined;
     setSegundos(30);
@@ -268,11 +100,16 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [segundos]);
 
+  /* ---------------------------------------------------------------- consultas */
+
   async function consultarLicencia(cedula, placaVehiculo = '') {
     setErrorLicencia('');
     setCargandoLicencia(true);
     try {
-      setLicencia(await consultarPuntosLicencia(cedula, placaVehiculo));
+      const r = await consultarPuntosLicencia(cedula, placaVehiculo);
+      setLicencia(r);
+      const o = ORIGEN[r.origen];
+      avisar(r.origen === 'CACHE_RESPALDO' ? 'warn' : 'ok', o.icon, 'Puntos de licencia', o.label);
     } catch (e) {
       setLicencia(null);
       setErrorLicencia(e.message);
@@ -292,12 +129,20 @@ export default function App() {
     setErrorVehiculo('');
     setCargando('persona');
     try {
-      const data = await verificarContribuyente(ruc.trim(), email.trim());
+      const data = await verificarContribuyente(identificacion.trim(), email.trim());
       setPersona(data);
-      // Con la cédula (10 primeros dígitos del RUC) se consultan los puntos de la licencia en la ANT.
+      if (data.esContribuyente) {
+        setConfeti(Date.now());
+        avisar('ok', '✅', 'Contribuyente verificado', `${data.contribuyente.razonSocial} · ${data.contribuyente.tipoContribuyente}`);
+      } else {
+        avisar('info', 'ℹ️', 'Cédula válida sin RUC', 'No es contribuyente del SRI; igual consultamos licencia y vehículo.');
+      }
+      setTimeout(() => resultadosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+      // Con la cédula se consultan los puntos de la licencia en la ANT.
       consultarLicencia(data.cedula);
     } catch (err) {
       setError(err.message);
+      avisar('error', '⛔', 'No se pudo verificar', err.message);
     } finally {
       setCargando('');
     }
@@ -310,7 +155,9 @@ export default function App() {
     setCargando('vehiculo');
     try {
       const placaNorm = placa.trim().toUpperCase().replace('-', '');
-      setVehiculo(await obtenerVehiculo(placaNorm));
+      const v = await obtenerVehiculo(placaNorm);
+      setVehiculo(v);
+      avisar('ok', '🚗', 'Vehículo encontrado', `${v.descripcionMarca ?? ''} ${v.descripcionModelo ?? ''}`.trim());
       consultarLicencia(persona.cedula, placaNorm);
     } catch (err) {
       setErrorVehiculo(err.message);
@@ -326,16 +173,30 @@ export default function App() {
     setError('');
     setErrorLicencia('');
     setErrorVehiculo('');
-    setRuc('');
+    setIdentificacion('');
     setPlaca('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cambiarTipo(t) {
+    setTipo(t);
+    setIdentificacion((v) => (t === 'cedula' ? v.slice(0, 10) : v));
   }
 
   const c = persona?.contribuyente;
   const origen = licencia ? ORIGEN[licencia.origen] : null;
+  const conf = TIPOS[tipo];
+
+  /* ---------------------------------------------------------------- vista */
 
   return (
     <>
-      <div className="hero">
+      <FondoAurora />
+      <Confeti disparo={confeti} />
+      <Toasts lista={toasts} cerrar={(id) => setToasts((t) => t.filter((x) => x.id !== id))} />
+      <PanelDemo ant={estado.ant} cambiar={cambiarDemo} />
+
+      <header className="hero">
         <div className="hero-bandera" />
         <div className="hero-contenido">
           <div className="hero-top">
@@ -345,16 +206,48 @@ export default function App() {
               {tema === 'oscuro' ? '☀️ Claro' : '🌙 Oscuro'}
             </button>
           </div>
-          <h1>Consulta de contribuyente, vehículo y licencia</h1>
-          <p>Verifica tu RUC en el SRI, conoce los datos de tu vehículo y los puntos de tu licencia en un solo lugar.</p>
-          <Stepper actual={pasoActual} />
+
+          <div className="hero-grid">
+            <div>
+              <h1>
+                Tu <span className="texto-gradiente">RUC</span>, tu <span className="texto-gradiente">vehículo</span> y
+                tu <span className="texto-gradiente">licencia</span> en un solo lugar
+              </h1>
+              <p className="hero-sub">
+                Consulta en segundos el SRI y la ANT. Aunque la ANT se caiga, la caché en la nube responde por ti.
+              </p>
+              <Stepper actual={pasoActual} />
+            </div>
+            <div className="hero-arte" aria-hidden="true">
+              <div className="orbita">
+                <span className="flotante f1">🚗</span>
+                <span className="flotante f2">🪪</span>
+                <span className="flotante f3">🧾</span>
+                <span className="flotante f4">🛡️</span>
+                <div className="nucleo">⚡</div>
+              </div>
+            </div>
+          </div>
+
           <BarraEstado sri={estado.sri} ant={estado.ant} />
         </div>
-      </div>
+      </header>
 
       <main>
-        <Tarjeta paso={1} icon="👤" titulo="Datos del usuario"
-                 subtitulo="Ingresa tu correo y el RUC de persona natural (13 dígitos terminados en 001).">
+        <section className="card buscador entrar">
+          <div className="card-brillo" />
+          <div className="buscador-titulo">
+            <div>
+              <span className="card-paso">Paso 1</span>
+              <h2>¿A quién consultamos?</h2>
+            </div>
+            <div className="segmentado" role="tablist">
+              <button type="button" className={tipo === 'cedula' ? 'sel' : ''} onClick={() => cambiarTipo('cedula')}>🪪 Cédula</button>
+              <button type="button" className={tipo === 'ruc' ? 'sel' : ''} onClick={() => cambiarTipo('ruc')}>🧾 RUC</button>
+              <span className={`segmentado-fondo ${tipo}`} />
+            </div>
+          </div>
+
           <form onSubmit={onVerificar} className="form">
             <label className="campo">
               <span>Correo electrónico</span>
@@ -365,119 +258,130 @@ export default function App() {
               </div>
             </label>
             <label className="campo">
-              <span>RUC (persona natural)</span>
+              <span>{tipo === 'cedula' ? 'Cédula de identidad' : 'RUC de persona natural'}</span>
               <div className="input-icono">
-                <i>🧾</i>
-                <input required pattern="\d{10}001" maxLength={13} inputMode="numeric" value={ruc}
-                       onChange={(e) => setRuc(e.target.value.replace(/\D/g, ''))}
-                       placeholder="1712345678001" title="13 dígitos terminados en 001" />
+                <i>{tipo === 'cedula' ? '🪪' : '🧾'}</i>
+                <input required pattern={conf.patron} maxLength={conf.largo} inputMode="numeric" value={identificacion}
+                       onChange={(e) => setIdentificacion(e.target.value.replace(/\D/g, ''))}
+                       placeholder={conf.ejemplo} title={conf.ayuda} />
+                <span className={`barra-largo ${identificacion.length === conf.largo ? 'completa' : ''}`}
+                      style={{ width: `${(identificacion.length / conf.largo) * 100}%` }} />
               </div>
-              <small className="contador">{ruc.length}/13</small>
+              <small className="contador">{identificacion.length}/{conf.largo} · {conf.ayuda}</small>
             </label>
-            <button className="btn" disabled={cargando === 'persona'}>
-              {cargando === 'persona' ? <><span className="spinner" /> Verificando…</> : 'Verificar en el SRI →'}
+            <button className="btn btn-principal" disabled={cargando === 'persona'}>
+              {cargando === 'persona' ? <><span className="spinner" /> Verificando…</> : <>Consultar <span className="flechita">→</span></>}
             </button>
           </form>
-          {error && <div className="alerta error fade-up">⛔ {error}</div>}
-        </Tarjeta>
+          {error && <div className="alerta error entrar">⛔ {error}</div>}
+        </section>
 
         {cargando === 'persona' && <section className="card"><Skeleton filas={4} /></section>}
 
+        <div ref={resultadosRef} />
+
         {persona && (
-          <Tarjeta paso={2} icon="🧾" titulo="Contribuyente verificado"
-                   subtitulo="Información obtenida del catastro del SRI." acento="acento-verde">
-            <div className="perfil">
-              <div className="avatar">{iniciales(c.razonSocial)}</div>
+          <Tarjeta paso={2} icon="🧾" acento={persona.esContribuyente ? 'verde' : 'cian'}
+                   titulo={persona.esContribuyente ? 'Contribuyente verificado' : 'Cédula verificada'}
+                   subtitulo={persona.esContribuyente ? 'Información del catastro del SRI.' : 'La cédula es válida pero no registra RUC en el SRI.'}>
+            <div className={`perfil ${persona.esContribuyente ? '' : 'sin-ruc'}`}>
+              <div className="avatar">{persona.esContribuyente ? iniciales(c.razonSocial) : '🪪'}</div>
               <div className="perfil-info">
-                <h3>{c.razonSocial}</h3>
+                <h3>{persona.esContribuyente ? c.razonSocial : `Cédula ${persona.cedula}`}</h3>
                 <div className="chips">
-                  <span className="chip chip-verde">✔ {c.tipoContribuyente}</span>
-                  <span className={`chip ${c.estadoContribuyenteRuc === 'ACTIVO' ? 'chip-verde' : 'chip-rojo'}`}>
-                    ● {c.estadoContribuyenteRuc}
-                  </span>
-                  {c.regimen && <span className="chip chip-azul">{c.regimen}</span>}
+                  {persona.esContribuyente ? (
+                    <>
+                      <span className="chip chip-verde">✔ {c.tipoContribuyente}</span>
+                      <span className={`chip ${c.estadoContribuyenteRuc === 'ACTIVO' ? 'chip-verde' : 'chip-rojo'}`}>● {c.estadoContribuyenteRuc}</span>
+                      {c.regimen && <span className="chip chip-azul">{c.regimen}</span>}
+                    </>
+                  ) : (
+                    <>
+                      <span className="chip chip-azul">✔ Cédula válida</span>
+                      <span className="chip chip-ambar">Sin RUC · no es contribuyente</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
             <div className="grid">
-              <Dato icon="🆔" label="RUC" value={c.numeroRuc} />
+              {persona.ruc && <Dato icon="🆔" label="RUC" value={persona.ruc} />}
               <Dato icon="🪪" label="Cédula" value={persona.cedula} />
               <Dato icon="✉️" label="Correo" value={persona.email} />
-              <Dato icon="💼" label="Actividad económica" value={c.actividadEconomicaPrincipal} />
-              <Dato icon="📒" label="Obligado a llevar contabilidad" value={c.obligadoLlevarContabilidad} />
-              <Dato icon="📅" label="Inicio de actividades"
-                    value={formatearFecha(c.informacionFechasContribuyente?.fechaInicioActividades)} />
+              {c && <Dato icon="💼" label="Actividad económica" value={c.actividadEconomicaPrincipal} />}
+              {c && <Dato icon="📒" label="Obligado a llevar contabilidad" value={c.obligadoLlevarContabilidad} />}
+              {c && <Dato icon="📅" label="Inicio de actividades" value={formatearFecha(c.informacionFechasContribuyente?.fechaInicioActividades)} />}
             </div>
           </Tarjeta>
         )}
 
         {persona && (
-          <Tarjeta paso={3} icon="🪪" titulo="Puntos de la licencia"
-                   subtitulo="Consulta a la ANT protegida con caché en la nube (Redis)." acento="acento-azul">
-            {cargandoLicencia && (
-              <div className="cargando-ant"><span className="spinner oscuro" /> Consultando a la ANT…</div>
-            )}
+          <div className="dos-columnas">
+            <Tarjeta paso={3} icon="🪪" titulo="Puntos de la licencia" acento="azul"
+                     subtitulo="Consulta a la ANT protegida con caché en la nube."
+                     extra={licencia?.simulado && <span className="sello-demo">🧪 Datos simulados</span>}>
+              {cargandoLicencia && (
+                <div className="cargando-ant"><span className="spinner oscuro" /> Consultando a la ANT…</div>
+              )}
 
-            {!cargandoLicencia && licencia && (
-              <div className="licencia fade-up">
-                <GaugePuntos puntos={licencia.licencia.puntosDisponibles} />
-                <div className="licencia-info">
-                  <span className={`origen origen-${origen.clase}`}>{origen.icon} {origen.label}</span>
-                  {licencia.aviso && <p className="aviso">{licencia.aviso}</p>}
-                  <div className="grid compacto">
-                    <Dato icon="📋" label="Citaciones" value={licencia.licencia.totalCitaciones} />
-                    <Dato icon="➖" label="Puntos descontados" value={licencia.licencia.puntosDescontados} />
-                    <Dato icon="🕒" label="Información obtenida" value={new Date(licencia.obtenidoEn).toLocaleString()} />
+              {!cargandoLicencia && licencia && (
+                <div className="licencia entrar">
+                  <GaugePuntos puntos={licencia.licencia.puntosDisponibles} />
+                  <div className="licencia-info">
+                    <span className={`origen origen-${origen.clase}`}>{origen.icon} {origen.label}</span>
+                    {licencia.aviso && <p className="aviso">{licencia.aviso}</p>}
+                    <div className="mini-stats">
+                      <div><strong>{licencia.licencia.totalCitaciones}</strong><span>citaciones</span></div>
+                      <div><strong>{licencia.licencia.puntosDescontados ?? '—'}</strong><span>puntos perdidos</span></div>
+                    </div>
+                    <small className="obtenido">🕒 {new Date(licencia.obtenidoEn).toLocaleString()}</small>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {!cargandoLicencia && licencia?.licencia.citaciones.length > 0 && (
-              <div className="tabla">
-                <table>
-                  <thead>
-                    <tr>{Object.keys(licencia.licencia.citaciones[0]).map((k) => <th key={k}>{k}</th>)}</tr>
-                  </thead>
-                  <tbody>
-                    {licencia.licencia.citaciones.map((fila, i) => (
-                      <tr key={i}>{Object.values(fila).map((v, j) => <td key={j}>{v}</td>)}</tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+              {!cargandoLicencia && licencia?.licencia.citaciones.length > 0 && (
+                <div className="tabla">
+                  <table>
+                    <thead>
+                      <tr>{Object.keys(licencia.licencia.citaciones[0]).map((k) => <th key={k}>{k}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {licencia.licencia.citaciones.map((fila, i) => (
+                        <tr key={i}>{Object.values(fila).map((v, j) => <td key={j}>{v}</td>)}</tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-            {!cargandoLicencia && errorLicencia && (
-              <div className="ant-caida fade-up">
-                <div className="ant-caida-icono">📡</div>
-                <div>
-                  <h3>La ANT no está disponible en este momento</h3>
-                  <p>{errorLicencia}</p>
-                  <p className="nota">
-                    Cuando la ANT responda correctamente, la información se guardará en la caché en la nube (Redis)
-                    y desde ese momento se mostrará desde allí aunque el portal vuelva a fallar.
-                    El servidor también reintenta en segundo plano.
-                  </p>
-                  <div className="reintento">
-                    <button className="btn secundario" onClick={() => consultarLicencia(persona.cedula, vehiculo?.numeroPlaca ?? '')}>
-                      ↻ Reintentar ahora
-                    </button>
-                    {segundos > 0 && <span className="cuenta">Reintento automático en {segundos} s</span>}
+              {!cargandoLicencia && errorLicencia && (
+                <div className="ant-caida entrar">
+                  <div className="ant-caida-icono">📡</div>
+                  <div>
+                    <h3>La ANT no está disponible</h3>
+                    <p>{errorLicencia}</p>
+                    <p className="nota">
+                      Cuando responda, la información se guardará en Redis y se mostrará desde allí aunque vuelva a fallar.
+                      ¿Quieres verlo ya? Abre <b>🧪 Modo demostración</b>.
+                    </p>
+                    <div className="reintento">
+                      <button className="btn secundario" onClick={() => consultarLicencia(persona.cedula, vehiculo?.numeroPlaca ?? '')}>
+                        ↻ Reintentar ahora
+                      </button>
+                      {segundos > 0 && <span className="cuenta">Reintento automático en {segundos} s</span>}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </Tarjeta>
+              )}
+            </Tarjeta>
+
+            <FlujoCache licencia={licencia} errorLicencia={errorLicencia} cargando={cargandoLicencia} ant={estado.ant} />
+          </div>
         )}
 
         {persona && (
-          <FlujoCache licencia={licencia} errorLicencia={errorLicencia} cargando={cargandoLicencia} ant={estado.ant} />
-        )}
-
-        {persona && (
-          <Tarjeta paso={4} icon="🚗" titulo="Matrícula de su vehículo"
-                   subtitulo="Ingresa la placa para obtener la información desde el SRI." acento="acento-naranja">
+          <Tarjeta paso={4} icon="🚗" titulo="Matrícula de su vehículo" acento="naranja"
+                   subtitulo="Ingresa la placa para obtener la información desde el SRI.">
             <form onSubmit={onVehiculo} className="form inline">
               <label className="campo">
                 <span>Placa</span>
@@ -488,29 +392,27 @@ export default function App() {
                 </div>
               </label>
               <button className="btn naranja" disabled={cargando === 'vehiculo'}>
-                {cargando === 'vehiculo' ? <><span className="spinner" /> Consultando…</> : 'Consultar vehículo →'}
+                {cargando === 'vehiculo' ? <><span className="spinner" /> Consultando…</> : <>Consultar vehículo <span className="flechita">→</span></>}
               </button>
             </form>
-            {errorVehiculo && <div className="alerta error fade-up">⛔ {errorVehiculo}</div>}
+            {errorVehiculo && <div className="alerta error entrar">⛔ {errorVehiculo}</div>}
             {cargando === 'vehiculo' && <Skeleton filas={3} />}
             {vehiculo && (
-              <div className="vehiculo fade-up">
+              <div className="vehiculo entrar">
                 <div className="vehiculo-cabecera">
                   <Placa numero={vehiculo.numeroPlaca} />
                   <div>
                     <h3>{vehiculo.descripcionMarca} {vehiculo.descripcionModelo}</h3>
                     <div className="chips">
                       {vehiculo.anioAuto && <span className="chip chip-azul">📅 {vehiculo.anioAuto}</span>}
-                      {vehiculo.ultimoAnioPagado && (
-                        <span className="chip chip-verde">💳 Último pago {vehiculo.ultimoAnioPagado}</span>
-                      )}
+                      {vehiculo.ultimoAnioPagado && <span className="chip chip-verde">💳 Último pago {vehiculo.ultimoAnioPagado}</span>}
+                      {vehiculo.descripcionPais && <span className="chip chip-violeta">🌎 {vehiculo.descripcionPais}</span>}
                     </div>
                   </div>
                 </div>
                 <div className="grid">
                   <Dato icon="🏭" label="Marca" value={vehiculo.descripcionMarca} />
                   <Dato icon="🚙" label="Modelo" value={vehiculo.descripcionModelo} />
-                  <Dato icon="🌎" label="País" value={vehiculo.descripcionPais} />
                   <Dato icon="🏷️" label="CAMV / CPN" value={vehiculo.numeroCamvCpn} />
                   <Dato icon="🚦" label="Clase" value={vehiculo.nombreClase} />
                   <Dato icon="🛠️" label="Servicio" value={vehiculo.descripcionServicio} />
@@ -534,12 +436,14 @@ export default function App() {
 
       <footer>
         <div className="impreso">Reporte generado el {new Date().toLocaleString()}</div>
-        React · Java 21 / Spring Boot (microservicios SRI y ANT) · Redis Cloud (Upstash) · Modelo C4 en IcePanel
+        <div className="footer-tech">
+          <span>⚛️ React</span><span>☕ Java 21 · Spring Boot</span><span>🗄️ Redis Cloud (Upstash)</span><span>🧩 C4 en IcePanel</span>
+        </div>
         <div className="enlaces">
           <a href="https://github.com/mateo-cuascota/Arquitectura_C4_Mateo_Cuascota" target="_blank" rel="noreferrer">GitHub</a>
-          <a href="https://app.icepanel.io/landscapes/ro5CkMchbD4bHcpi5HuM/versions/latest/diagrams/editor?diagram=5M5LMF8Q5X" target="_blank" rel="noreferrer">Modelo C4 (IcePanel)</a>
-          <a href="http://localhost:8081/swagger-ui.html" target="_blank" rel="noreferrer">API SRI (Swagger)</a>
-          <a href="http://localhost:8082/swagger-ui.html" target="_blank" rel="noreferrer">API ANT (Swagger)</a>
+          <a href="https://app.icepanel.io/landscapes/ro5CkMchbD4bHcpi5HuM/versions/latest/diagrams/editor?diagram=5M5LMF8Q5X" target="_blank" rel="noreferrer">Modelo C4</a>
+          <a href="http://localhost:8081/swagger-ui.html" target="_blank" rel="noreferrer">API SRI</a>
+          <a href="http://localhost:8082/swagger-ui.html" target="_blank" rel="noreferrer">API ANT</a>
         </div>
       </footer>
     </>

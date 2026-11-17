@@ -6,6 +6,8 @@ import ec.edu.c4.ant.cache.LicenciaCacheRepository;
 import ec.edu.c4.ant.client.AntClient;
 import ec.edu.c4.ant.client.AntResponseParser;
 import ec.edu.c4.ant.client.AntUnavailableException;
+import ec.edu.c4.ant.demo.ModoDemo;
+import org.springframework.beans.factory.annotation.Autowired;
 import ec.edu.c4.ant.model.LicenciaInfo;
 import ec.edu.c4.ant.model.LicenciaResponse;
 import ec.edu.c4.ant.model.LicenciaResponse.Origen;
@@ -38,11 +40,26 @@ public class LicenciaService {
     private final LicenciaCacheRepository cache;
     private final ConsultasPendientesRepository pendientes;
     private final AntMonitor monitor;
+    private final ModoDemo modo;
     private final Duration freshTtl;
+
+    @Autowired
+    public LicenciaService(AntClient ant, AntResponseParser parser, LicenciaCacheRepository cache,
+                           ConsultasPendientesRepository pendientes, AntMonitor monitor, ModoDemo modo,
+                           @Value("${ant.cache.fresh-ttl:PT30M}") Duration freshTtl) {
+        this.ant = ant;
+        this.parser = parser;
+        this.cache = cache;
+        this.pendientes = pendientes;
+        this.monitor = monitor;
+        this.modo = modo;
+        this.freshTtl = freshTtl;
+    }
 
     public LicenciaService(AntClient ant, AntResponseParser parser, LicenciaCacheRepository cache,
                            ConsultasPendientesRepository pendientes, AntMonitor monitor,
                            @Value("${ant.cache.fresh-ttl:PT30M}") Duration freshTtl) {
+        this.modo = new ModoDemo();
         this.monitor = monitor;
         this.ant = ant;
         this.parser = parser;
@@ -52,10 +69,24 @@ public class LicenciaService {
     }
 
     public LicenciaResponse consultar(String cedula, String placa) {
-        String key = LicenciaCacheRepository.key(cedula, placa);
+        return consultarInterno(cedula, placa).conSimulado(modo.activo());
+    }
+
+    public boolean modoDemoActivo() {
+        return modo.activo();
+    }
+
+    private String clave(String cedula, String placa) {
+        return modo.prefijo() + LicenciaCacheRepository.key(cedula, placa);
+    }
+
+    private LicenciaResponse consultarInterno(String cedula, String placa) {
+        String key = clave(cedula, placa);
         Optional<CachedLicencia> cached = cache.find(key);
 
-        if (cached.isPresent() && cached.get().cachedAt().isAfter(Instant.now().minus(freshTtl))) {
+        // En modo demo la copia "reciente" dura 10 s para poder mostrar el respaldo sin esperar.
+        Duration vigencia = modo.activo() ? Duration.ofSeconds(10) : freshTtl;
+        if (cached.isPresent() && cached.get().cachedAt().isAfter(Instant.now().minus(vigencia))) {
             monitor.desdeCache();
             return new LicenciaResponse(cached.get().data(), Origen.CACHE, cached.get().cachedAt(),
                     "Información obtenida de la caché (consulta reciente)");
@@ -75,7 +106,9 @@ public class LicenciaService {
                 return new LicenciaResponse(c.data(), Origen.CACHE_RESPALDO, c.cachedAt(),
                         "La ANT no está disponible; se muestra la última información válida almacenada");
             }
-            pendientes.agregar(cedula, placa);
+            if (!modo.activo()) {
+                pendientes.agregar(cedula, placa);
+            }
             throw new AntUnavailableException(
                     "El portal de la ANT no responde y todavía no hay información guardada en la caché para esta cédula. "
                             + "La consulta quedó en cola y se reintentará automáticamente.", e);
@@ -95,8 +128,10 @@ public class LicenciaService {
             throw e;
         }
         monitor.exitoAnt();
-        cache.save(LicenciaCacheRepository.key(cedula, placa), info);
-        pendientes.quitar(cedula, placa);
+        cache.save(clave(cedula, placa), info);
+        if (!modo.activo()) {
+            pendientes.quitar(cedula, placa);
+        }
         return info;
     }
 }

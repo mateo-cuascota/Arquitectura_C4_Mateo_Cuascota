@@ -12,7 +12,16 @@ public record LicenciaResponse(
         LicenciaInfo licencia,
         Origen origen,
         Instant obtenidoEn,
-        String aviso
+        String aviso,
+        boolean simulado
 ) {
+    public LicenciaResponse(LicenciaInfo licencia, Origen origen, Instant obtenidoEn, String aviso) {
+        this(licencia, origen, obtenidoEn, aviso, false);
+    }
+
+    public LicenciaResponse conSimulado(boolean s) {
+        return new LicenciaResponse(licencia, origen, obtenidoEn, aviso, s);
+    }
+
     public enum Origen { ANT, CACHE, CACHE_RESPALDO }
 }

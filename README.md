@@ -4,7 +4,7 @@
 
 Sistema web que:
 
-1. Recibe el **correo electrónico** y el **RUC** de una persona natural.
+1. Recibe el **correo electrónico** y el **RUC** de una persona natural (o solo su **cédula**: se valida el dígito verificador y se consulta el RUC `cédula + 001`; si no tiene RUC, el flujo continúa con la licencia y el vehículo).
 2. Verifica en el SRI que el RUC sea contribuyente (`existePorNumeroRuc`) y **persona natural** (`obtenerPorNumerosRuc`) y muestra su información.
 3. Con la cédula (10 primeros dígitos del RUC) consulta los **puntos de la licencia** en la ANT (`clp_grid_citaciones.jsp`).
 4. Pide la **placa** y muestra la información del vehículo (`BaseVehiculo/obtenerPorNumeroPlacaOPorNumeroCampvOPorNumeroCpn`).
@@ -43,7 +43,9 @@ Modelo en **IcePanel** (los cuatro diagramas son vistas del mismo modelo, de lo 
 | **Pruebas automáticas** del patrón con la ANT simulada por HTTP | `LicenciaServiceTest`, `FlujoCacheAntTest` |
 | **Integración continua** (pruebas del backend y build del frontend en cada push) | [GitHub Actions](.github/workflows/ci.yml) |
 | **Docker Compose** para levantar todo con un comando | [`docker-compose.yml`](docker-compose.yml) |
-| Tema claro/oscuro, reporte en PDF, placa estilo Ecuador e indicador circular de puntos | Web |
+| **Modo demostración**: simulador de la ANT (datos marcados como simulados) con interruptor para simular su caída y ver el respaldo desde Redis | Botón 🧪 en la web · `POST /api/ant/demo` |
+| **Cédula o RUC** con validación del dígito verificador (módulo 10) | `Identificacion.java` |
+| Notificaciones, confeti, contador animado de puntos, tema claro/oscuro, reporte en PDF y placa estilo Ecuador | Web |
 
 ### Patrón de caché (ANT Service)
 
@@ -172,6 +174,20 @@ cd backend
 ```
 
 `LicenciaServiceTest` (4 casos del patrón) y `FlujoCacheAntTest` (flujo completo con la ANT simulada por HTTP, cola de pendientes y reintento). Las mismas pruebas corren en GitHub Actions en cada push.
+
+## Modo demostración (para presentar)
+
+El portal real de la ANT responde **502**, así que en vivo solo se ve el aviso y la cola. Para mostrar el patrón completo:
+
+1. Abre **🧪 Modo demostración** (abajo a la izquierda) y activa **Usar simulador de la ANT**.
+2. Consulta una cédula → la tarjeta muestra **⚡ En vivo desde la ANT** y los datos quedan en Redis (prefijo `demo:`).
+3. Vuelve a consultar antes de 10 s → **🗄️ Desde la caché**.
+4. Activa **Simular caída de la ANT**, espera 10 s y consulta → **🛟 Caché de respaldo** con los mismos datos.
+5. Desactiva el modo demostración para volver al portal real.
+
+Los datos simulados llevan el sello **🧪 Datos simulados** y nunca se mezclan con la caché real.
+
+> El indicador **🛡️ Protección activa** (circuit breaker abierto) no es un error: tras varios fallos de la ANT el circuito deja de llamarla durante 60 s y responde desde la caché; luego vuelve a probar sola.
 
 ## Docker (opcional)
 

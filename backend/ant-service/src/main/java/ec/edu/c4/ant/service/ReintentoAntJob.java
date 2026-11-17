@@ -28,6 +28,9 @@ public class ReintentoAntJob {
 
     @Scheduled(fixedDelayString = "${ant.reintento.intervalo:PT2M}", initialDelayString = "${ant.reintento.intervalo:PT2M}")
     public void reintentarPendientes() {
+        if (service.modoDemoActivo()) {
+            return; // la cola real solo se reintenta contra el portal real
+        }
         Set<String> lista = pendientes.listar();
         if (lista.isEmpty()) {
             return;

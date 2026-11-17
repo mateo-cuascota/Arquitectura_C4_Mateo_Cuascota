@@ -15,20 +15,29 @@ public class ContribuyenteService {
     }
 
     /**
-     * 1) Verifica que el RUC sea contribuyente del SRI (existePorNumeroRuc).
-     * 2) Obtiene su informacion (obtenerPorNumerosRuc) y valida que sea PERSONA NATURAL.
+     * Acepta cedula o RUC de persona natural.
+     * <ol>
+     *   <li>Verifica con existePorNumeroRuc si es contribuyente del SRI (con la cedula se usa cedula + 001).</li>
+     *   <li>Si lo es, obtiene su informacion (obtenerPorNumerosRuc) y valida que sea PERSONA NATURAL.</li>
+     *   <li>Si se ingreso solo la cedula y no tiene RUC, se informa que no es contribuyente y el flujo
+     *       continua (la consulta de licencia y vehiculo solo necesita la cedula).</li>
+     * </ol>
      */
-    public ContribuyenteResponse verificar(String ruc, String email) {
-        if (!sri.existePorNumeroRuc(ruc)) {
-            throw new NotFoundException("El RUC " + ruc + " no está registrado como contribuyente en el SRI");
+    public ContribuyenteResponse verificar(String identificacion, String email) {
+        Identificacion id = Identificacion.de(identificacion);
+
+        if (!sri.existePorNumeroRuc(id.ruc())) {
+            if (id.ingresoRuc()) {
+                throw new NotFoundException("El RUC " + id.ruc() + " no está registrado como contribuyente en el SRI");
+            }
+            return new ContribuyenteResponse(null, id.cedula(), email, false, true, null);
         }
-        Contribuyente c = sri.obtenerPorNumeroRuc(ruc)
-                .orElseThrow(() -> new NotFoundException("No se encontró información del RUC " + ruc));
+        Contribuyente c = sri.obtenerPorNumeroRuc(id.ruc())
+                .orElseThrow(() -> new NotFoundException("No se encontró información del RUC " + id.ruc()));
         if (!c.esPersonaNatural()) {
-            throw new BusinessRuleException("El RUC " + ruc + " corresponde a " + c.tipoContribuyente()
+            throw new BusinessRuleException("El RUC " + id.ruc() + " corresponde a " + c.tipoContribuyente()
                     + "; se requiere una PERSONA NATURAL");
         }
-        String cedula = ruc.substring(0, 10);
-        return new ContribuyenteResponse(ruc, cedula, email, true, true, c);
+        return new ContribuyenteResponse(id.ruc(), id.cedula(), email, true, true, c);
     }
 }

@@ -18,6 +18,16 @@ public class AntMonitor {
     private final AtomicLong respuestasRespaldo = new AtomicLong();
     private final AtomicLong fallosAnt = new AtomicLong();
 
+    public void reiniciar() {
+        ultimaRespuestaOk.set(null);
+        ultimoFallo.set(null);
+        ultimoError.set(null);
+        respuestasAnt.set(0);
+        respuestasCache.set(0);
+        respuestasRespaldo.set(0);
+        fallosAnt.set(0);
+    }
+
     public void exitoAnt() {
         ultimaRespuestaOk.set(Instant.now());
         respuestasAnt.incrementAndGet();

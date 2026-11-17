@@ -29,17 +29,17 @@ public class SriController {
         this.vehiculos = vehiculos;
     }
 
-    /** GET /api/sri/contribuyentes/{ruc}?email=... */
-    @Operation(summary = "Verifica que el RUC sea contribuyente PERSONA NATURAL y devuelve su información")
-    @GetMapping("/contribuyentes/{ruc}")
+    /** GET /api/sri/contribuyentes/{cedulaORuc}?email=... */
+    @Operation(summary = "Acepta cédula o RUC: verifica si es contribuyente PERSONA NATURAL y devuelve su información")
+    @GetMapping("/contribuyentes/{identificacion}")
     public ContribuyenteResponse verificarContribuyente(
             @PathVariable
-            @Pattern(regexp = "\\d{10}001", message = "El RUC de persona natural debe tener 13 dígitos y terminar en 001")
-            String ruc,
+            @Pattern(regexp = "\\d{10}|\\d{10}001", message = "Ingresa una cédula de 10 dígitos o un RUC de 13 dígitos terminado en 001")
+            String identificacion,
             @RequestParam(required = false)
             @Email(message = "Correo electrónico inválido")
             String email) {
-        return contribuyentes.verificar(ruc, email);
+        return contribuyentes.verificar(identificacion, email);
     }
 
     /** GET /api/sri/vehiculos/{placa} */

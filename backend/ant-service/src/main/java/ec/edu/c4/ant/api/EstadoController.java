@@ -1,5 +1,6 @@
 package ec.edu.c4.ant.api;
 
+import ec.edu.c4.ant.demo.ModoDemo;
 import ec.edu.c4.ant.service.AntMonitor;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -23,8 +24,10 @@ public class EstadoController {
     private final AntMonitor monitor;
     private final CircuitBreakerRegistry circuitos;
     private final StringRedisTemplate redis;
+    private final ModoDemo modo;
 
-    public EstadoController(AntMonitor monitor, CircuitBreakerRegistry circuitos, StringRedisTemplate redis) {
+    public EstadoController(AntMonitor monitor, CircuitBreakerRegistry circuitos, StringRedisTemplate redis, ModoDemo modo) {
+        this.modo = modo;
         this.monitor = monitor;
         this.circuitos = circuitos;
         this.redis = redis;
@@ -42,8 +45,14 @@ public class EstadoController {
             long fallosAnt,
             Instant ultimaRespuestaAnt,
             Instant ultimoFalloAnt,
-            String ultimoError
+            String ultimoError,
+            boolean modoDemo,
+            boolean antCaidaSimulada,
+            long segundosParaReintentarAnt
     ) { }
+
+    /** Debe coincidir con resilience4j.circuitbreaker.instances.ant.wait-duration-in-open-state. */
+    private static final long ESPERA_CIRCUITO_ABIERTO = 60;
 
     @Operation(summary = "Estado del circuito de la ANT, de Redis y de la caché")
     @GetMapping("/estado")
@@ -54,7 +63,7 @@ public class EstadoController {
         long pendientes = 0;
         try {
             redisOk = "PONG".equalsIgnoreCase(redis.execute((org.springframework.data.redis.core.RedisCallback<String>) c -> c.ping()));
-            try (Cursor<String> cursor = redis.scan(ScanOptions.scanOptions().match("ant:licencia:*").count(500).build())) {
+            try (Cursor<String> cursor = redis.scan(ScanOptions.scanOptions().match(modo.prefijo() + "ant:licencia:*").count(500).build())) {
                 while (cursor.hasNext() && enCache < 10_000) {
                     cursor.next();
                     enCache++;
@@ -70,6 +79,16 @@ public class EstadoController {
                 cb.getMetrics().getFailureRate(),
                 redisOk, enCache, pendientes,
                 monitor.respuestasAnt(), monitor.respuestasCache(), monitor.respuestasRespaldo(), monitor.fallosAnt(),
-                monitor.ultimaRespuestaOk(), monitor.ultimoFallo(), monitor.ultimoError());
+                monitor.ultimaRespuestaOk(), monitor.ultimoFallo(), monitor.ultimoError(),
+                modo.activo(), modo.antCaida(), segundosParaReintentar(cb));
+    }
+
+    /** Segundos que faltan para que el circuito abierto pase a semiabierto y vuelva a probar la ANT. */
+    private long segundosParaReintentar(CircuitBreaker cb) {
+        if (cb.getState() != CircuitBreaker.State.OPEN || monitor.ultimoFallo() == null) {
+            return 0;
+        }
+        long transcurridos = java.time.Duration.between(monitor.ultimoFallo(), Instant.now()).toSeconds();
+        return Math.max(0, ESPERA_CIRCUITO_ABIERTO - transcurridos);
     }
 }

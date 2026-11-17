@@ -2,6 +2,9 @@ package ec.edu.c4.ant.client;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
+import ec.edu.c4.ant.demo.ModoDemo;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -22,9 +25,21 @@ public class AntClient {
                     + "?ps_tipo_identificacion=CED&ps_identificacion={cedula}&ps_placa={placa}";
 
     private final RestClient rest;
+    private final RestClient simulador;
+    private final ModoDemo modo;
 
+    @Autowired
+    public AntClient(RestClient antRestClient, ModoDemo modo, @Value("${server.port:8082}") int puerto) {
+        this.rest = antRestClient;
+        this.modo = modo;
+        this.simulador = RestClient.builder().baseUrl("http://localhost:" + puerto + "/simulador-ant").build();
+    }
+
+    /** Constructor para pruebas: siempre usa el portal indicado. */
     public AntClient(RestClient antRestClient) {
         this.rest = antRestClient;
+        this.modo = new ModoDemo();
+        this.simulador = antRestClient;
     }
 
     @Retry(name = "ant")
@@ -32,7 +47,8 @@ public class AntClient {
     public String consultarCitaciones(String cedula, String placa) {
         String body;
         try {
-            body = rest.get()
+            RestClient destino = modo.activo() ? simulador : rest;
+            body = destino.get()
                     .uri(CITACIONES, cedula, placa == null ? "" : placa)
                     .retrieve()
                     .body(String.class);

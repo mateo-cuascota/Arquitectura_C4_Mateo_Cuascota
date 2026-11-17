@@ -19,6 +19,11 @@ public class ApiExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
+    @ExceptionHandler(ec.edu.c4.sri.service.ValidacionException.class)
+    ProblemDetail validacion(ec.edu.c4.sri.service.ValidacionException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
     @ExceptionHandler(BusinessRuleException.class)
     ProblemDetail businessRule(BusinessRuleException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage());
