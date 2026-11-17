@@ -57,7 +57,7 @@ class FlujoCacheAntTest {
         cache = new CacheEnMemoria();
         pendientes = new PendientesEnMemoria();
         // fresh-ttl = 0: obliga a llamar a la ANT en cada consulta para probar el respaldo
-        service = new LicenciaService(new AntClient(builder.build()), new AntResponseParser(), cache, pendientes, Duration.ZERO);
+        service = new LicenciaService(new AntClient(builder.build()), new AntResponseParser(), cache, pendientes, new AntMonitor(), Duration.ZERO);
     }
 
     @Test

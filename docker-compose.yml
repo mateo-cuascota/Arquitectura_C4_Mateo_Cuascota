@@ -1,0 +1,29 @@
+# Levanta todo el sistema con Docker:  docker compose up --build   ->  http://localhost:8080
+# Usa la REDIS_URL del archivo .env (Redis en la nube, por ejemplo Upstash).
+services:
+  sri-service:
+    build:
+      context: ./backend
+      args:
+        SERVICIO: sri-service
+    environment:
+      CORS_ORIGINS: http://localhost:8080
+    ports:
+      - "8081:8081"
+
+  ant-service:
+    build:
+      context: ./backend
+      args:
+        SERVICIO: ant-service
+    env_file: .env
+    environment:
+      CORS_ORIGINS: http://localhost:8080
+    ports:
+      - "8082:8082"
+
+  web:
+    build: ./frontend
+    depends_on: [sri-service, ant-service]
+    ports:
+      - "8080:80"

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { consultarPuntosLicencia, obtenerVehiculo, verificarContribuyente } from './api.js';
+import {
+  consultarPuntosLicencia, estadoAnt, estadoSri, obtenerVehiculo, verificarContribuyente,
+} from './api.js';
 
 const ORIGEN = {
   ANT: { label: 'En vivo desde la ANT', icon: '⚡', clase: 'ok' },
@@ -100,6 +102,116 @@ function Placa({ numero }) {
   );
 }
 
+const CIRCUITO = {
+  CLOSED: { texto: 'cerrado', clase: 'ok' },
+  HALF_OPEN: { texto: 'semiabierto', clase: 'warn' },
+  OPEN: { texto: 'abierto', clase: 'mal' },
+};
+
+function Indicador({ estado, etiqueta, detalle }) {
+  return (
+    <span className={`indicador ind-${estado}`} title={detalle}>
+      <i className="punto" />
+      {etiqueta}
+    </span>
+  );
+}
+
+function BarraEstado({ sri, ant }) {
+  const antOk = ant && ant.ultimaRespuestaAnt && (!ant.ultimoFalloAnt || ant.ultimaRespuestaAnt > ant.ultimoFalloAnt);
+  const antEstado = !ant ? 'off' : antOk ? 'ok' : ant.fallosAnt > 0 ? 'mal' : 'warn';
+  const circuito = ant ? CIRCUITO[ant.circuitoAnt] ?? CIRCUITO.CLOSED : null;
+  return (
+    <div className="barra-estado">
+      <Indicador estado={!sri ? 'off' : sri.sriDisponible ? 'ok' : 'mal'}
+                 etiqueta={!sri ? 'SRI · sin conexión' : sri.sriDisponible ? `SRI en línea · ${sri.latenciaMs} ms` : 'SRI no responde'} />
+      <Indicador estado={antEstado}
+                 etiqueta={!ant ? 'ANT · servicio apagado' : antOk ? 'ANT en línea' : ant.fallosAnt > 0 ? 'ANT caída' : 'ANT sin consultar'}
+                 detalle={ant?.ultimoError ?? ''} />
+      {circuito && <Indicador estado={circuito.clase} etiqueta={`Circuit breaker ${circuito.texto}`} />}
+      <Indicador estado={!ant ? 'off' : ant.redisConectado ? 'ok' : 'mal'}
+                 etiqueta={!ant ? 'Caché · sin datos' : ant.redisConectado
+                   ? `Caché Redis · ${ant.consultasEnCache} guardada(s) · ${ant.consultasPendientes} en cola`
+                   : 'Caché Redis desconectada'} />
+    </div>
+  );
+}
+
+function escenarioCache(licencia, errorLicencia, cargando) {
+  if (cargando) return { activo: 'cargando', pasos: [1] };
+  if (licencia?.origen === 'CACHE') return { activo: 'cache', pasos: [1] };
+  if (licencia?.origen === 'ANT') return { activo: 'ant', pasos: [1, 2, 3] };
+  if (licencia?.origen === 'CACHE_RESPALDO') return { activo: 'respaldo', pasos: [1, 2, 4] };
+  if (errorLicencia) return { activo: 'cola', pasos: [1, 2, 5] };
+  return { activo: 'inactivo', pasos: [] };
+}
+
+const PASOS_CACHE = [
+  [1, '🔎', 'Buscar en Redis', 'Si hay una copia de menos de 30 min se responde desde la caché.'],
+  [2, '📡', 'Consultar la ANT', 'Con Retry (2 intentos) y Circuit Breaker para no saturar el portal.'],
+  [3, '💾', 'Guardar y leer de la caché', 'Cada respuesta adecuada se guarda (7 días) y se devuelve desde Redis.'],
+  [4, '🛟', 'Respaldo', 'Si la ANT falla se devuelve la última copia válida guardada.'],
+  [5, '⏳', 'Cola y reintento', 'Sin copia: la consulta queda en cola y se reintenta cada 2 min.'],
+];
+
+function FlujoCache({ licencia, errorLicencia, cargando, ant }) {
+  const { activo, pasos } = escenarioCache(licencia, errorLicencia, cargando);
+  const antMal = activo === 'respaldo' || activo === 'cola';
+  const redisLeido = ['cache', 'respaldo', 'ant'].includes(activo);
+  return (
+    <section className="card fade-up acento-violeta">
+      <header className="card-head">
+        <div className="card-icon">🧠</div>
+        <div>
+          <span className="card-paso">Arquitectura en vivo</span>
+          <h2>¿De dónde salió la información de la licencia?</h2>
+          <p>Patrón Cache-Aside con respaldo + Circuit Breaker sobre Redis en la nube.</p>
+        </div>
+      </header>
+
+      <div className="flujo">
+        <div className="nodo activo"><span>🖥️</span>Web App<small>React</small></div>
+        <div className="flecha activo">→</div>
+        <div className={`nodo ${activo !== 'inactivo' ? 'activo' : ''}`}><span>☕</span>ANT Service<small>Spring Boot</small></div>
+        <div className="ramas">
+          <div className="rama">
+            <div className={`flecha ${redisLeido ? 'activo' : activo === 'cola' ? 'falla' : ''}`}>↔</div>
+            <div className={`nodo ${redisLeido ? 'activo verde' : activo === 'cola' ? 'falla' : ''}`}>
+              <span>🗄️</span>Redis Cloud<small>{activo === 'cola' ? 'sin copia aún' : 'Upstash'}</small>
+            </div>
+          </div>
+          <div className="rama">
+            <div className={`flecha ${activo === 'ant' ? 'activo' : antMal ? 'falla' : ''}`}>{antMal ? '✕' : '→'}</div>
+            <div className={`nodo ${activo === 'ant' ? 'activo verde' : antMal ? 'falla' : ''}`}>
+              <span>🏛️</span>Portal ANT<small>{antMal ? 'no responde' : 'consultaweb'}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ol className="pasos-cache">
+        {PASOS_CACHE.map(([n, icono, titulo, texto]) => (
+          <li key={n} className={pasos.includes(n) ? (n === pasos[pasos.length - 1] ? 'actual' : 'hecho') : ''}>
+            <span className="pc-icono">{icono}</span>
+            <div><strong>{titulo}</strong><p>{texto}</p></div>
+          </li>
+        ))}
+      </ol>
+
+      {ant && (
+        <div className="metricas">
+          <div><strong>{ant.respuestasAnt}</strong><span>respuestas de la ANT</span></div>
+          <div><strong>{ant.respuestasCache}</strong><span>desde caché</span></div>
+          <div><strong>{ant.respuestasRespaldo}</strong><span>desde respaldo</span></div>
+          <div><strong>{ant.fallosAnt}</strong><span>fallos de la ANT</span></div>
+          <div><strong>{ant.consultasEnCache}</strong><span>consultas guardadas</span></div>
+          <div><strong>{ant.consultasPendientes}</strong><span>en cola</span></div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function App() {
   const [email, setEmail] = useState('');
   const [ruc, setRuc] = useState('');
@@ -116,6 +228,28 @@ export default function App() {
   const [errorLicencia, setErrorLicencia] = useState('');
 
   const [segundos, setSegundos] = useState(0);
+  const [estado, setEstado] = useState({ sri: null, ant: null });
+  const [tema, setTema] = useState(() => localStorage.getItem('tema') ?? 'claro');
+
+  useEffect(() => {
+    document.documentElement.dataset.tema = tema;
+    localStorage.setItem('tema', tema);
+  }, [tema]);
+
+  async function actualizarEstado() {
+    const [sri, ant] = await Promise.allSettled([estadoSri(), estadoAnt()]);
+    setEstado({
+      sri: sri.status === 'fulfilled' ? sri.value : null,
+      ant: ant.status === 'fulfilled' ? ant.value : null,
+    });
+  }
+
+  // Panel de estado: se actualiza cada 15 s y después de cada consulta de licencia.
+  useEffect(() => {
+    actualizarEstado();
+    const t = setInterval(actualizarEstado, 15000);
+    return () => clearInterval(t);
+  }, []);
 
   const pasoActual = vehiculo ? 4 : persona ? (licencia || errorLicencia ? 3 : 2) : 0;
 
@@ -144,6 +278,7 @@ export default function App() {
       setErrorLicencia(e.message);
     } finally {
       setCargandoLicencia(false);
+      actualizarEstado();
     }
   }
 
@@ -203,10 +338,17 @@ export default function App() {
       <div className="hero">
         <div className="hero-bandera" />
         <div className="hero-contenido">
-          <span className="hero-chip"><i className="mini-bandera" /> SRI · ANT · Ecuador</span>
+          <div className="hero-top">
+            <span className="hero-chip"><i className="mini-bandera" /> SRI · ANT · Ecuador</span>
+            <button className="tema" onClick={() => setTema(tema === 'oscuro' ? 'claro' : 'oscuro')}
+                    title="Cambiar tema" aria-label="Cambiar tema">
+              {tema === 'oscuro' ? '☀️ Claro' : '🌙 Oscuro'}
+            </button>
+          </div>
           <h1>Consulta de contribuyente, vehículo y licencia</h1>
           <p>Verifica tu RUC en el SRI, conoce los datos de tu vehículo y los puntos de tu licencia en un solo lugar.</p>
           <Stepper actual={pasoActual} />
+          <BarraEstado sri={estado.sri} ant={estado.ant} />
         </div>
       </div>
 
@@ -330,6 +472,10 @@ export default function App() {
         )}
 
         {persona && (
+          <FlujoCache licencia={licencia} errorLicencia={errorLicencia} cargando={cargandoLicencia} ant={estado.ant} />
+        )}
+
+        {persona && (
           <Tarjeta paso={4} icon="🚗" titulo="Matrícula de su vehículo"
                    subtitulo="Ingresa la placa para obtener la información desde el SRI." acento="acento-naranja">
             <form onSubmit={onVehiculo} className="form inline">
@@ -380,13 +526,21 @@ export default function App() {
 
         {persona && (
           <div className="acciones">
+            <button className="btn fantasma" onClick={() => window.print()}>🖨️ Descargar reporte (PDF)</button>
             <button className="btn fantasma" onClick={nuevaConsulta}>↺ Nueva consulta</button>
           </div>
         )}
       </main>
 
       <footer>
+        <div className="impreso">Reporte generado el {new Date().toLocaleString()}</div>
         React · Java 21 / Spring Boot (microservicios SRI y ANT) · Redis Cloud (Upstash) · Modelo C4 en IcePanel
+        <div className="enlaces">
+          <a href="https://github.com/mateo-cuascota/Arquitectura_C4_Mateo_Cuascota" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://app.icepanel.io/landscapes/ro5CkMchbD4bHcpi5HuM/versions/latest/diagrams/editor?diagram=5M5LMF8Q5X" target="_blank" rel="noreferrer">Modelo C4 (IcePanel)</a>
+          <a href="http://localhost:8081/swagger-ui.html" target="_blank" rel="noreferrer">API SRI (Swagger)</a>
+          <a href="http://localhost:8082/swagger-ui.html" target="_blank" rel="noreferrer">API ANT (Swagger)</a>
+        </div>
       </footer>
     </>
   );

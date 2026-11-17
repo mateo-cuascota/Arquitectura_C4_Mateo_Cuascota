@@ -19,9 +19,22 @@ if (Select-String -Path "$root\.env" -Pattern '^REDIS_URL=redis://localhost' -Qu
     Write-Warning "REDIS_URL en .env apunta a localhost: edita .env y pon la URL de tu Redis en la nube (sin ella no hay cache)."
 }
 
+# Si el sistema ya estaba corriendo, se detiene para poder recompilar (los .jar quedan bloqueados en Windows).
+foreach ($puerto in 8081, 8082, 5173) {
+    $conexion = Get-NetTCPConnection -LocalPort $puerto -State Listen -ErrorAction SilentlyContinue
+    if ($conexion) {
+        Write-Host "== Deteniendo el proceso anterior en el puerto $puerto" -ForegroundColor Yellow
+        $conexion.OwningProcess | Sort-Object -Unique | ForEach-Object { taskkill /PID $_ /T /F | Out-Null }
+    }
+}
+Get-Process powershell -ErrorAction SilentlyContinue |
+    Where-Object { $_.MainWindowTitle -match ':8081|:8082|:5173' } | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 1
+
 Write-Host '== Compilando backend (Maven Wrapper)...' -ForegroundColor Cyan
 Push-Location "$root\backend"
-& .\mvnw.cmd -q -B -DskipTests package
+# "clean" evita usar clases compiladas por la extension Java de VS Code en target/
+& .\mvnw.cmd -q -B -DskipTests clean package
 if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'Fallo la compilacion del backend.' }
 Pop-Location
 

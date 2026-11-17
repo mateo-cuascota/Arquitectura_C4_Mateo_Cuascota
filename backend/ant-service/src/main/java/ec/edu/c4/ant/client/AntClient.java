@@ -5,6 +5,7 @@ import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.Locale;
 
@@ -35,11 +36,14 @@ public class AntClient {
                     .uri(CITACIONES, cedula, placa == null ? "" : placa)
                     .retrieve()
                     .body(String.class);
+        } catch (RestClientResponseException e) {
+            throw new AntUnavailableException("La ANT respondió HTTP " + e.getStatusCode().value()
+                    + " (" + e.getStatusText() + ")", e);
         } catch (RestClientException e) {
-            throw new AntUnavailableException("Error al invocar la ANT: " + e.getMessage(), e);
+            throw new AntUnavailableException("No se pudo conectar con la ANT: " + e.getMostSpecificCause().getMessage(), e);
         }
         if (!esRespuestaAdecuada(body)) {
-            throw new AntUnavailableException("La ANT devolvio una respuesta vacia o una pagina de error");
+            throw new AntUnavailableException("La ANT devolvió una respuesta vacía o una página de error");
         }
         return body;
     }

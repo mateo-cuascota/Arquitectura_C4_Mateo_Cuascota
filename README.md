@@ -1,5 +1,7 @@
 # Sistema de Consulta Vehicular – C4 + IcePanel
 
+[![CI](https://github.com/mateo-cuascota/Arquitectura_C4_Mateo_Cuascota/actions/workflows/ci.yml/badge.svg)](https://github.com/mateo-cuascota/Arquitectura_C4_Mateo_Cuascota/actions/workflows/ci.yml)
+
 Sistema web que:
 
 1. Recibe el **correo electrónico** y el **RUC** de una persona natural.
@@ -17,12 +19,31 @@ Sistema web que:
 
 ## Arquitectura C4
 
-- **IcePanel**: https://app.icepanel.io/landscapes/ro5CkMchbD4bHcpi5HuM/versions/latest/diagrams/editor?diagram=5M5LMF8Q5X
-  - Nivel 1 – *Context Diagram*
-  - Nivel 2 – *Contenedores - Sistema de Consulta Vehicular*
-  - Nivel 3 – *Componentes - ANT Service* y *Componentes - SRI Service*
-  - ADR-001 – Cache-Aside con respaldo + Circuit Breaker para la ANT
+Modelo en **IcePanel** (los cuatro diagramas son vistas del mismo modelo, de lo general a lo detallado):
+
+| Nivel C4 | Diagrama | Qué muestra |
+|---|---|---|
+| 1 – Contexto | [Diagrama de contexto](https://app.icepanel.io/landscapes/ro5CkMchbD4bHcpi5HuM/versions/latest/diagrams/editor?diagram=5M5LMF8Q5X) | Usuario, el sistema y los sistemas externos SRI y ANT |
+| 2 – Contenedores | [Contenedores - Sistema de Consulta Vehicular](https://app.icepanel.io/landscapes/ro5CkMchbD4bHcpi5HuM/versions/latest/diagrams/editor?diagram=QkKuuBn6Rm) | Web App (React), SRI Service y ANT Service (Java) y Caché Cloud (Redis) |
+| 3 – Componentes | [Componentes - ANT Service](https://app.icepanel.io/landscapes/ro5CkMchbD4bHcpi5HuM/versions/latest/diagrams/editor?diagram=9tPsJvLUj0) | Patrón de caché: controlador, servicio, cliente ANT, parser, repositorio Redis, reintento y estado |
+| 3 – Componentes | [Componentes - SRI Service](https://app.icepanel.io/landscapes/ro5CkMchbD4bHcpi5HuM/versions/latest/diagrams/editor?diagram=vXnzr0lZ35) | Verificación de contribuyente, vehículo y estado del SRI |
+
+- **ADR-001** (en IcePanel → Decisiones): Cache-Aside con respaldo + Circuit Breaker para la ANT.
+- Cada objeto del modelo enlaza a su carpeta o archivo en este repositorio.
 - Copia en Mermaid (se ve en GitHub): [`docs/c4-model.md`](docs/c4-model.md)
+
+## Extras
+
+| Extra | Dónde |
+|---|---|
+| **Panel de estado en vivo** (SRI, ANT, Circuit Breaker y Redis, se actualiza cada 15 s) | Encabezado de la web · `GET /api/sri/estado`, `GET /api/ant/estado` |
+| **"Arquitectura en vivo"**: muestra de dónde salió el dato (caché, ANT, respaldo o cola) y métricas del patrón | Tarjeta en la web |
+| **Reintento en segundo plano** de consultas sin caché (cola `ant:pendientes` en Redis) | `ReintentoAntJob` |
+| **Documentación de APIs con Swagger/OpenAPI** | http://localhost:8081/swagger-ui.html · http://localhost:8082/swagger-ui.html |
+| **Pruebas automáticas** del patrón con la ANT simulada por HTTP | `LicenciaServiceTest`, `FlujoCacheAntTest` |
+| **Integración continua** (pruebas del backend y build del frontend en cada push) | [GitHub Actions](.github/workflows/ci.yml) |
+| **Docker Compose** para levantar todo con un comando | [`docker-compose.yml`](docker-compose.yml) |
+| Tema claro/oscuro, reporte en PDF, placa estilo Ecuador e indicador circular de puntos | Web |
 
 ### Patrón de caché (ANT Service)
 
@@ -150,6 +171,16 @@ cd backend
 ./mvnw test
 ```
 
-`LicenciaServiceTest` (4 casos del patrón) y `FlujoCacheAntTest` (flujo completo con la ANT simulada por HTTP, cola de pendientes y reintento).
+`LicenciaServiceTest` (4 casos del patrón) y `FlujoCacheAntTest` (flujo completo con la ANT simulada por HTTP, cola de pendientes y reintento). Las mismas pruebas corren en GitHub Actions en cada push.
+
+## Docker (opcional)
+
+Con Docker instalado y el archivo `.env` configurado:
+
+```bash
+docker compose up --build
+```
+
+Abre http://localhost:8080 (nginx sirve el frontend y redirige `/api/sri` y `/api/ant` a cada microservicio).
 
 > Nota: el formato exacto de la grilla de la ANT no está documentado (durante el desarrollo respondía 502). `AntResponseParser` acepta XML de jqGrid o tabla HTML, suma la columna de puntos si existe y calcula los puntos disponibles sobre 30.

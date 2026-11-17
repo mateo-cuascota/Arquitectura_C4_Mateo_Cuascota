@@ -41,7 +41,7 @@ class LicenciaServiceTest {
         ant = mock(AntClient.class);
         cache = mock(LicenciaCacheRepository.class);
         pendientes = mock(ConsultasPendientesRepository.class);
-        service = new LicenciaService(ant, new AntResponseParser(), cache, pendientes, Duration.ofMinutes(30));
+        service = new LicenciaService(ant, new AntResponseParser(), cache, pendientes, new AntMonitor(), Duration.ofMinutes(30));
     }
 
     @Test

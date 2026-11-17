@@ -4,6 +4,8 @@ import ec.edu.c4.sri.model.ContribuyenteResponse;
 import ec.edu.c4.sri.model.Vehiculo;
 import ec.edu.c4.sri.service.ContribuyenteService;
 import ec.edu.c4.sri.service.VehiculoService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.validation.annotation.Validated;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "SRI", description = "Contribuyentes y vehículos")
 @Validated
 @RestController
 @RequestMapping("/api/sri")
@@ -27,6 +30,7 @@ public class SriController {
     }
 
     /** GET /api/sri/contribuyentes/{ruc}?email=... */
+    @Operation(summary = "Verifica que el RUC sea contribuyente PERSONA NATURAL y devuelve su información")
     @GetMapping("/contribuyentes/{ruc}")
     public ContribuyenteResponse verificarContribuyente(
             @PathVariable
@@ -39,6 +43,7 @@ public class SriController {
     }
 
     /** GET /api/sri/vehiculos/{placa} */
+    @Operation(summary = "Obtiene la información del vehículo por placa, CAMV o CPN")
     @GetMapping("/vehiculos/{placa}")
     public Vehiculo obtenerVehiculo(
             @PathVariable

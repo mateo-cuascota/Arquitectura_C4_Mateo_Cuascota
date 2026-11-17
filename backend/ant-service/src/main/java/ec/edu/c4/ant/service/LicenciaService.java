@@ -37,11 +37,13 @@ public class LicenciaService {
     private final AntResponseParser parser;
     private final LicenciaCacheRepository cache;
     private final ConsultasPendientesRepository pendientes;
+    private final AntMonitor monitor;
     private final Duration freshTtl;
 
     public LicenciaService(AntClient ant, AntResponseParser parser, LicenciaCacheRepository cache,
-                           ConsultasPendientesRepository pendientes,
+                           ConsultasPendientesRepository pendientes, AntMonitor monitor,
                            @Value("${ant.cache.fresh-ttl:PT30M}") Duration freshTtl) {
+        this.monitor = monitor;
         this.ant = ant;
         this.parser = parser;
         this.cache = cache;
@@ -54,6 +56,7 @@ public class LicenciaService {
         Optional<CachedLicencia> cached = cache.find(key);
 
         if (cached.isPresent() && cached.get().cachedAt().isAfter(Instant.now().minus(freshTtl))) {
+            monitor.desdeCache();
             return new LicenciaResponse(cached.get().data(), Origen.CACHE, cached.get().cachedAt(),
                     "Información obtenida de la caché (consulta reciente)");
         }
@@ -67,6 +70,7 @@ public class LicenciaService {
         } catch (Exception e) {
             log.warn("ANT no disponible para {}: {}", key, e.getMessage());
             if (cached.isPresent()) {
+                monitor.desdeRespaldo();
                 CachedLicencia c = cached.get();
                 return new LicenciaResponse(c.data(), Origen.CACHE_RESPALDO, c.cachedAt(),
                         "La ANT no está disponible; se muestra la última información válida almacenada");
@@ -83,8 +87,14 @@ public class LicenciaService {
      * Lanza excepcion si la ANT no responde correctamente.
      */
     public LicenciaInfo consultarAntYGuardar(String cedula, String placa) {
-        String body = ant.consultarCitaciones(cedula, placa);
-        LicenciaInfo info = parser.parse(body, cedula, placa);
+        LicenciaInfo info;
+        try {
+            info = parser.parse(ant.consultarCitaciones(cedula, placa), cedula, placa);
+        } catch (RuntimeException e) {
+            monitor.falloAnt(e.getMessage());
+            throw e;
+        }
+        monitor.exitoAnt();
         cache.save(LicenciaCacheRepository.key(cedula, placa), info);
         pendientes.quitar(cedula, placa);
         return info;

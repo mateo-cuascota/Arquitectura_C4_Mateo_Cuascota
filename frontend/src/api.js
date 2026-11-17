@@ -20,6 +20,14 @@ export function obtenerVehiculo(placa) {
   return getJson(`${SRI_URL}/api/sri/vehiculos/${encodeURIComponent(placa)}`);
 }
 
+export function estadoSri() {
+  return getJson(`${SRI_URL}/api/sri/estado`);
+}
+
+export function estadoAnt() {
+  return getJson(`${ANT_URL}/api/ant/estado`);
+}
+
 export function consultarPuntosLicencia(cedula, placa = '') {
   const q = new URLSearchParams({ placa });
   return getJson(`${ANT_URL}/api/ant/licencias/${encodeURIComponent(cedula)}?${q}`);
