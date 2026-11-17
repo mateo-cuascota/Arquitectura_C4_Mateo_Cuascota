@@ -1,0 +1,58 @@
+server:
+  port: ${PORT:8082}
+
+spring:
+  application:
+    name: ant-service
+  config:
+    # Lee REDIS_URL y demas variables desde el archivo .env de la raiz del proyecto
+    # (funciona al ejecutar desde la raiz, desde backend/ o desde backend/ant-service/).
+    import: "optional:file:.env[.properties],optional:file:../.env[.properties],optional:file:../../.env[.properties]"
+  data:
+    redis:
+      # Cache en la nube. Ejemplos:
+      #   Redis Cloud / Upstash: rediss://default:<password>@<host>:<port>
+      #   Azure Cache for Redis: rediss://:<access-key>@<nombre>.redis.cache.windows.net:6380
+      # Local (docker run -p 6379:6379 redis): redis://localhost:6379
+      url: ${REDIS_URL:redis://localhost:6379}
+      timeout: 3s
+
+ant:
+  base-url: https://consultaweb.ant.gob.ec
+  timeout-ms: 10000
+  cache:
+    fresh-ttl: ${ANT_CACHE_FRESH_TTL:PT30M}   # se devuelve del cache sin consultar la ANT
+    ttl: ${ANT_CACHE_TTL:P7D}                 # copia de respaldo si la ANT esta caida
+
+resilience4j:
+  retry:
+    instances:
+      ant:
+        max-attempts: 2
+        wait-duration: 500ms
+        retry-exceptions:
+          - ec.edu.c4.ant.client.AntUnavailableException
+  circuitbreaker:
+    instances:
+      ant:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 4
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 2
+        record-exceptions:
+          - ec.edu.c4.ant.client.AntUnavailableException
+
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,circuitbreakers
+  health:
+    circuitbreakers:
+      enabled: true
