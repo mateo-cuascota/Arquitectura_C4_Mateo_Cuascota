@@ -43,11 +43,13 @@ Requisitos: **Java 21** y **Node.js 18+** (`winget install OpenJS.NodeJS.LTS`). 
 
 1. Crear una base gratuita en **Upstash** (https://console.upstash.com → *Create Database*) o **Redis Cloud** (https://redis.io/try-free).
 2. Copiar la URL de conexión `rediss://default:<password>@<host>:<puerto>`.
-3. En la raíz del proyecto copiar `.env.example` como `.env` y pegarla:
+3. En la raíz del proyecto copiar `.env.example` como `.env` (los scripts de inicio lo crean solos si no existe) y pegarla:
 
 ```bash
-copy .env.example .env
+cp .env.example .env
 ```
+
+(En PowerShell/CMD: `copy .env.example .env`.)
 
 ```properties
 REDIS_URL=rediss://default:<password>@<host>:<puerto>
@@ -58,7 +60,15 @@ Si Redis no está disponible el sistema sigue funcionando, solo que sin caché.
 
 ### 2. Opción rápida: un solo comando
 
-Doble clic en **`iniciar.cmd`** (o en PowerShell `.\iniciar.cmd`). Compila el backend, instala el frontend y abre tres ventanas: SRI Service (8081), ANT Service (8082) y Web App (5173). Luego abrir http://localhost:5173.
+Según la terminal:
+
+| Terminal | Comando |
+|---|---|
+| bash (Git Bash / MSYS2, terminal por defecto de VS Code en este equipo) | `./iniciar.sh` |
+| PowerShell | `.\iniciar.cmd` |
+| Explorador de Windows | doble clic en `iniciar.cmd` |
+
+El script compila el backend, instala el frontend y abre tres ventanas: SRI Service (8081), ANT Service (8082) y Web App (5173). Luego abrir http://localhost:5173.
 
 ### 3. Opción manual
 

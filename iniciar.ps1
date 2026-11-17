@@ -3,13 +3,20 @@
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 
+# Recarga el PATH de Windows (por si Node/Java se instalaron con la terminal ya abierta
+# o si se lanza desde bash/MSYS2, que no hereda el PATH completo).
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
+            [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:Path
+
+if (-not (Test-Path "$root\.env")) { Copy-Item "$root\.env.example" "$root\.env" }
+
 if (-not (Get-Command java -ErrorAction SilentlyContinue)) { throw 'Falta Java 21 (https://adoptium.net).' }
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
     throw 'Falta Node.js 18+. Instalalo con:  winget install OpenJS.NodeJS.LTS  (y abre una terminal nueva).'
 }
 
-if (-not (Test-Path "$root\.env")) {
-    Write-Warning "No existe .env: el ANT Service usara redis://localhost:6379. Copia .env.example como .env y pon tu REDIS_URL de la nube."
+if (Select-String -Path "$root\.env" -Pattern '^REDIS_URL=redis://localhost' -Quiet) {
+    Write-Warning "REDIS_URL en .env apunta a localhost: edita .env y pon la URL de tu Redis en la nube (sin ella no hay cache)."
 }
 
 Write-Host '== Compilando backend (Maven Wrapper)...' -ForegroundColor Cyan
