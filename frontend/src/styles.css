@@ -246,6 +246,8 @@ input.mayus { text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600
 .ant-caida h3 { margin: 0 0 4px; color: #92400e; font-size: 1.05rem; }
 .ant-caida p { margin: 0 0 6px; color: #78350f; }
 .ant-caida .nota { font-size: 0.85rem; color: #a16207; }
+.reintento { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.cuenta { font-size: 0.85rem; color: #92400e; font-variant-numeric: tabular-nums; }
 
 .tabla { overflow-x: auto; margin-top: 20px; border-radius: 12px; border: 1px solid var(--borde); }
 table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }

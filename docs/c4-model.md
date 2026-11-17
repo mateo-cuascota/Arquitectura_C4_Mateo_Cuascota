@@ -49,6 +49,7 @@ Container_Boundary(antSvc, "ANT Service") {
   Component(client, "AntClient", "RestClient + Resilience4j", "Retry y Circuit Breaker hacia la ANT")
   Component(parser, "AntResponseParser", "Jsoup", "Convierte la grilla HTML/XML en puntos y citaciones")
   Component(repo, "LicenciaCacheRepository", "Spring Data Redis", "Guarda/lee CachedLicencia con TTL")
+  Component(job, "ReintentoAntJob", "@Scheduled", "Reintenta cada 2 min las consultas en cola ant:pendientes")
 }
 System_Ext(ant, "ANT - Portal Web")
 ContainerDb(cache, "Caché Cloud", "Redis")
@@ -58,6 +59,7 @@ Rel(svc, client, "consultarCitaciones")
 Rel(svc, parser, "parse")
 Rel(client, ant, "HTTPS")
 Rel(repo, cache, "GET/SET con TTL")
+Rel(job, svc, "consultarAntYGuardar")
 ```
 
 ## Nivel 3 – Componentes del SRI Service
@@ -87,4 +89,4 @@ Rel(client, sri, "HTTPS/JSON")
 2. Si no hay copia reciente se llama a la ANT (`AntClient`, con Retry ×2 y Circuit Breaker).
 3. **Cada respuesta adecuada** (HTTP 2xx, con contenido, sin página de error) se guarda en Redis con TTL de 7 días → `origen = ANT`.
 4. Si la ANT falla o el circuito está abierto, se devuelve la última copia válida → `origen = CACHE_RESPALDO`, con aviso al usuario.
-5. Si tampoco hay copia en caché se responde `503`.
+5. Si tampoco hay copia en caché, la consulta se encola en `ant:pendientes`, `ReintentoAntJob` la reintenta cada 2 min hasta guardarla y se responde `503`.

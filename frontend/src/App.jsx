@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { consultarPuntosLicencia, obtenerVehiculo, verificarContribuyente } from './api.js';
 
 const ORIGEN = {
@@ -115,7 +115,24 @@ export default function App() {
   const [errorVehiculo, setErrorVehiculo] = useState('');
   const [errorLicencia, setErrorLicencia] = useState('');
 
+  const [segundos, setSegundos] = useState(0);
+
   const pasoActual = vehiculo ? 4 : persona ? (licencia || errorLicencia ? 3 : 2) : 0;
+
+  // Si la ANT está caída, se reintenta automáticamente cada 30 s mientras la página esté abierta.
+  useEffect(() => {
+    if (!errorLicencia || !persona) return undefined;
+    setSegundos(30);
+    const t = setInterval(() => setSegundos((s) => s - 1), 1000);
+    return () => clearInterval(t);
+  }, [errorLicencia, persona]);
+
+  useEffect(() => {
+    if (errorLicencia && persona && segundos === 0 && !cargandoLicencia) {
+      consultarLicencia(persona.cedula, vehiculo?.numeroPlaca ?? '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [segundos]);
 
   async function consultarLicencia(cedula, placaVehiculo = '') {
     setErrorLicencia('');
@@ -296,12 +313,16 @@ export default function App() {
                   <h3>La ANT no está disponible en este momento</h3>
                   <p>{errorLicencia}</p>
                   <p className="nota">
-                    Cada vez que la ANT responda correctamente, la información se guardará en la caché en la nube
-                    y se mostrará desde allí cuando el portal vuelva a fallar.
+                    Cuando la ANT responda correctamente, la información se guardará en la caché en la nube (Redis)
+                    y desde ese momento se mostrará desde allí aunque el portal vuelva a fallar.
+                    El servidor también reintenta en segundo plano.
                   </p>
-                  <button className="btn secundario" onClick={() => consultarLicencia(persona.cedula, vehiculo?.numeroPlaca ?? '')}>
-                    ↻ Reintentar
-                  </button>
+                  <div className="reintento">
+                    <button className="btn secundario" onClick={() => consultarLicencia(persona.cedula, vehiculo?.numeroPlaca ?? '')}>
+                      ↻ Reintentar ahora
+                    </button>
+                    {segundos > 0 && <span className="cuenta">Reintento automático en {segundos} s</span>}
+                  </div>
                 </div>
               </div>
             )}

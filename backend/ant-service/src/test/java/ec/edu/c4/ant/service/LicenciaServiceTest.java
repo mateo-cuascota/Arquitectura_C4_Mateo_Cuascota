@@ -1,6 +1,7 @@
 package ec.edu.c4.ant.service;
 
 import ec.edu.c4.ant.cache.CachedLicencia;
+import ec.edu.c4.ant.cache.ConsultasPendientesRepository;
 import ec.edu.c4.ant.cache.LicenciaCacheRepository;
 import ec.edu.c4.ant.client.AntClient;
 import ec.edu.c4.ant.client.AntResponseParser;
@@ -32,13 +33,15 @@ class LicenciaServiceTest {
 
     private AntClient ant;
     private LicenciaCacheRepository cache;
+    private ConsultasPendientesRepository pendientes;
     private LicenciaService service;
 
     @BeforeEach
     void setUp() {
         ant = mock(AntClient.class);
         cache = mock(LicenciaCacheRepository.class);
-        service = new LicenciaService(ant, new AntResponseParser(), cache, Duration.ofMinutes(30));
+        pendientes = mock(ConsultasPendientesRepository.class);
+        service = new LicenciaService(ant, new AntResponseParser(), cache, pendientes, Duration.ofMinutes(30));
     }
 
     @Test
@@ -84,5 +87,6 @@ class LicenciaServiceTest {
         when(ant.consultarCitaciones(CED, "")).thenThrow(new AntUnavailableException("timeout"));
 
         assertThatThrownBy(() -> service.consultar(CED, "")).isInstanceOf(AntUnavailableException.class);
+        verify(pendientes).agregar(CED, "");
     }
 }

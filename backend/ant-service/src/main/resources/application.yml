@@ -23,6 +23,8 @@ ant:
   cache:
     fresh-ttl: ${ANT_CACHE_FRESH_TTL:PT30M}   # se devuelve del cache sin consultar la ANT
     ttl: ${ANT_CACHE_TTL:P7D}                 # copia de respaldo si la ANT esta caida
+  reintento:
+    intervalo: ${ANT_REINTENTO_INTERVALO:PT2M} # reintento en segundo plano de consultas pendientes
 
 resilience4j:
   retry:

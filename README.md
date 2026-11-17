@@ -26,14 +26,24 @@ Sistema web que:
 
 ### Patrón de caché (ANT Service)
 
+Se invoca **después de ingresar la cédula** (los 10 primeros dígitos del RUC) y de nuevo al ingresar la placa.
+
 ```
 Front ──► LicenciaController ──► LicenciaService
-                                   │ 1. find(key) en Redis ── copia < 30 min ──► devuelve (origen CACHE)
-                                   │ 2. AntClient (Retry + Circuit Breaker) ──► ANT
-                                   │      ok  ──► 3. save(key) TTL 7 días ──► devuelve (origen ANT)
-                                   │      falla ─► 4. última copia válida ──► devuelve (origen CACHE_RESPALDO)
-                                   │                 sin copia ──► 503
+                                   │ 1. find(key) en Redis ── copia < 30 min ──► devuelve desde caché (origen CACHE)
+                                   │ 2. AntClient (Retry + Circuit Breaker) ──► ANT clp_grid_citaciones.jsp
+                                   │      respuesta adecuada ──► 3. save(key) en Redis (TTL 7 días)
+                                   │                              └─► se lee de Redis y se devuelve (origen ANT)
+                                   │      falla ─► 4. última copia válida en Redis ──► (origen CACHE_RESPALDO)
+                                   │                 sin copia ──► encola en ant:pendientes + 503
+ReintentoAntJob (cada 2 min) ──► reintenta ant:pendientes ──► cuando la ANT responde, guarda en Redis
 ```
+
+Una respuesta es **adecuada** si es HTTP 2xx, tiene contenido, no es una página de error (502/503/504) y contiene la grilla de citaciones (JSON, XML o tabla HTML de jqGrid). Solo esas respuestas se guardan.
+
+`FlujoCacheAntTest` simula la ANT por HTTP y verifica el flujo completo: la ANT responde → se guarda → la ANT cae (502) → se devuelve desde la caché; y también que una consulta sin caché queda en cola y el job la guarda cuando la ANT vuelve.
+
+> Al momento de entregar, `consultaweb.ant.gob.ec` responde **502 Bad Gateway** en todas sus páginas (incluso la de inicio), mientras `www.ant.gob.ec` sigue enlazando a esa misma URL. Por eso el sistema muestra "ANT no disponible" y deja la consulta en cola hasta que el portal vuelva.
 
 ## Ejecutar en local
 
@@ -140,6 +150,6 @@ cd backend
 ./mvnw test
 ```
 
-`LicenciaServiceTest` cubre los cuatro casos del patrón: respuesta en vivo que se guarda en caché, caché reciente, caché de respaldo con la ANT caída y 503 sin caché.
+`LicenciaServiceTest` (4 casos del patrón) y `FlujoCacheAntTest` (flujo completo con la ANT simulada por HTTP, cola de pendientes y reintento).
 
 > Nota: el formato exacto de la grilla de la ANT no está documentado (durante el desarrollo respondía 502). `AntResponseParser` acepta XML de jqGrid o tabla HTML, suma la columna de puntos si existe y calcula los puntos disponibles sobre 30.
