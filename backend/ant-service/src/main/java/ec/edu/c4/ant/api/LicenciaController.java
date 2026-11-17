@@ -24,9 +24,9 @@ public class LicenciaController {
     /** GET /api/ant/licencias/{cedula}?placa=ABC1234 */
     @GetMapping("/licencias/{cedula}")
     public LicenciaResponse puntos(
-            @PathVariable @Pattern(regexp = "\\d{10}", message = "La cedula debe tener 10 digitos") String cedula,
+            @PathVariable @Pattern(regexp = "\\d{10}", message = "La cédula debe tener 10 dígitos") String cedula,
             @RequestParam(required = false, defaultValue = "")
-            @Pattern(regexp = "[A-Za-z0-9-]{0,20}", message = "Placa invalida") String placa) {
+            @Pattern(regexp = "[A-Za-z0-9-]{0,20}", message = "Placa inválida") String placa) {
         return service.consultar(cedula, placa.trim().toUpperCase().replace("-", ""));
     }
 }

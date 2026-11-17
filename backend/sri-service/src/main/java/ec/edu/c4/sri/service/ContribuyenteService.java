@@ -20,10 +20,10 @@ public class ContribuyenteService {
      */
     public ContribuyenteResponse verificar(String ruc, String email) {
         if (!sri.existePorNumeroRuc(ruc)) {
-            throw new NotFoundException("El RUC " + ruc + " no esta registrado como contribuyente en el SRI");
+            throw new NotFoundException("El RUC " + ruc + " no está registrado como contribuyente en el SRI");
         }
         Contribuyente c = sri.obtenerPorNumeroRuc(ruc)
-                .orElseThrow(() -> new NotFoundException("No se encontro informacion del RUC " + ruc));
+                .orElseThrow(() -> new NotFoundException("No se encontró información del RUC " + ruc));
         if (!c.esPersonaNatural()) {
             throw new BusinessRuleException("El RUC " + ruc + " corresponde a " + c.tipoContribuyente()
                     + "; se requiere una PERSONA NATURAL");

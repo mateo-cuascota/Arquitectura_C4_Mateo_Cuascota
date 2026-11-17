@@ -30,10 +30,10 @@ public class SriController {
     @GetMapping("/contribuyentes/{ruc}")
     public ContribuyenteResponse verificarContribuyente(
             @PathVariable
-            @Pattern(regexp = "\\d{10}001", message = "El RUC de persona natural debe tener 13 digitos y terminar en 001")
+            @Pattern(regexp = "\\d{10}001", message = "El RUC de persona natural debe tener 13 dígitos y terminar en 001")
             String ruc,
             @RequestParam(required = false)
-            @Email(message = "Correo electronico invalido")
+            @Email(message = "Correo electrónico inválido")
             String email) {
         return contribuyentes.verificar(ruc, email);
     }
@@ -42,7 +42,7 @@ public class SriController {
     @GetMapping("/vehiculos/{placa}")
     public Vehiculo obtenerVehiculo(
             @PathVariable
-            @Pattern(regexp = "[A-Za-z0-9-]{5,20}", message = "Placa invalida")
+            @Pattern(regexp = "[A-Za-z0-9-]{5,20}", message = "Placa inválida")
             String placa) {
         return vehiculos.obtener(placa);
     }

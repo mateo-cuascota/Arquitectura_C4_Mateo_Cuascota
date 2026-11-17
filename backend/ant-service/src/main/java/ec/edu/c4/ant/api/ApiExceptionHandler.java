@@ -21,7 +21,7 @@ public class ApiExceptionHandler {
         String msg = e.getAllValidationResults().stream()
                 .flatMap(r -> r.getResolvableErrors().stream())
                 .map(MessageSourceResolvable::getDefaultMessage)
-                .findFirst().orElse("Datos invalidos");
+                .findFirst().orElse("Datos inválidos");
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, msg);
     }
 }

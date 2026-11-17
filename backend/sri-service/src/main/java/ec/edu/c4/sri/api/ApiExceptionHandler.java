@@ -29,7 +29,7 @@ public class ApiExceptionHandler {
         String msg = e.getAllValidationResults().stream()
                 .flatMap(r -> r.getResolvableErrors().stream())
                 .map(MessageSourceResolvable::getDefaultMessage)
-                .findFirst().orElse("Datos invalidos");
+                .findFirst().orElse("Datos inválidos");
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, msg);
     }
 
@@ -37,13 +37,13 @@ public class ApiExceptionHandler {
     ProblemDetail constraint(ConstraintViolationException e) {
         String msg = e.getConstraintViolations().stream()
                 .map(jakarta.validation.ConstraintViolation::getMessage)
-                .findFirst().orElse("Datos invalidos");
+                .findFirst().orElse("Datos inválidos");
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, msg);
     }
 
     @ExceptionHandler(RestClientException.class)
     ProblemDetail upstream(RestClientException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY,
-                "El servicio del SRI no respondio correctamente: " + e.getMessage());
+                "El servicio del SRI no respondió correctamente: " + e.getMessage());
     }
 }

@@ -50,7 +50,7 @@ public class LicenciaService {
 
         if (cached.isPresent() && cached.get().cachedAt().isAfter(Instant.now().minus(freshTtl))) {
             return new LicenciaResponse(cached.get().data(), Origen.CACHE, cached.get().cachedAt(),
-                    "Informacion obtenida del cache (consulta reciente)");
+                    "Información obtenida de la caché (consulta reciente)");
         }
 
         try {
@@ -62,9 +62,9 @@ public class LicenciaService {
             log.warn("ANT no disponible para {}: {}", key, e.getMessage());
             return cached
                     .map(c -> new LicenciaResponse(c.data(), Origen.CACHE_RESPALDO, c.cachedAt(),
-                            "La ANT no esta disponible; se muestra la ultima informacion valida almacenada"))
+                            "La ANT no está disponible; se muestra la última información válida almacenada"))
                     .orElseThrow(() -> new AntUnavailableException(
-                            "La ANT no esta disponible y no existe informacion previa en cache para esta cedula", e));
+                            "El portal de la ANT no responde y todavía no hay información guardada en la caché para esta cédula.", e));
         }
     }
 }
