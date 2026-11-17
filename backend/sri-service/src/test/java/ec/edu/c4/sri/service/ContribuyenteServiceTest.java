@@ -2,6 +2,7 @@ package ec.edu.c4.sri.service;
 
 import ec.edu.c4.sri.client.SriClient;
 import ec.edu.c4.sri.model.Contribuyente;
+import ec.edu.c4.sri.model.PersonaRegistro;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -51,8 +52,11 @@ class ContribuyenteServiceTest {
     @Test
     void conCedulaSinRucContinuaComoNoContribuyente() {
         when(sri.existePorNumeroRuc("1710034065001")).thenReturn(false);
+        when(sri.obtenerPersonaPorCedula("1710034065"))
+                .thenReturn(Optional.of(new PersonaRegistro("1710034065", "PEREZ LOPEZ ANA", "NAT")));
 
         var r = service.verificar("1710034065", "a@b.com");
+        assertThat(r.persona().nombreCompleto()).isEqualTo("PEREZ LOPEZ ANA");
 
         assertThat(r.esContribuyente()).isFalse();
         assertThat(r.cedula()).isEqualTo("1710034065");

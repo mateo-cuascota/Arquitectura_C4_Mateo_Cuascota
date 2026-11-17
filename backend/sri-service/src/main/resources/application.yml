@@ -4,10 +4,21 @@ server:
 spring:
   application:
     name: sri-service
+  config:
+    # Lee REDIS_URL desde el .env de la raiz (misma cache en la nube que el ANT Service)
+    import: "optional:file:.env[.properties],optional:file:../.env[.properties],optional:file:../../.env[.properties]"
+  cache:
+    type: redis
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+      timeout: 3s
 
 sri:
   base-url: https://srienlinea.sri.gob.ec
   timeout-ms: 8000
+  cache:
+    ttl: ${SRI_CACHE_TTL:PT6H}   # respuestas del SRI guardadas en Redis
 
 app:
   cors:

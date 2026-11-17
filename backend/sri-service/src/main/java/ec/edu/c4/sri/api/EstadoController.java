@@ -38,7 +38,7 @@ public class EstadoController {
         long inicio = System.currentTimeMillis();
         boolean ok;
         try {
-            ok = sri.existePorNumeroRuc(RUC_PRUEBA);
+            ok = sri.ping(RUC_PRUEBA);
         } catch (RuntimeException ex) {
             ok = false;
         }

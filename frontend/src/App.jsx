@@ -135,7 +135,8 @@ export default function App() {
         setConfeti(Date.now());
         avisar('ok', '✅', 'Contribuyente verificado', `${data.contribuyente.razonSocial} · ${data.contribuyente.tipoContribuyente}`);
       } else {
-        avisar('info', 'ℹ️', 'Cédula válida sin RUC', 'No es contribuyente del SRI; igual consultamos licencia y vehículo.');
+        avisar('info', 'ℹ️', data.persona ? data.persona.nombreCompleto : 'Cédula válida sin RUC',
+          'No es contribuyente del SRI; igual consultamos licencia y vehículo.');
       }
       setTimeout(() => resultadosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
       // Con la cédula se consultan los puntos de la licencia en la ANT.
@@ -184,6 +185,7 @@ export default function App() {
   }
 
   const c = persona?.contribuyente;
+  const nombre = c?.razonSocial ?? persona?.persona?.nombreCompleto ?? null;
   const origen = licencia ? ORIGEN[licencia.origen] : null;
   const conf = TIPOS[tipo];
 
@@ -283,11 +285,12 @@ export default function App() {
         {persona && (
           <Tarjeta paso={2} icon="🧾" acento={persona.esContribuyente ? 'verde' : 'cian'}
                    titulo={persona.esContribuyente ? 'Contribuyente verificado' : 'Cédula verificada'}
-                   subtitulo={persona.esContribuyente ? 'Información del catastro del SRI.' : 'La cédula es válida pero no registra RUC en el SRI.'}>
+                   subtitulo={persona.esContribuyente ? 'Información del catastro del SRI.' : persona.persona
+                     ? 'Datos obtenidos por cédula del SRI; no registra RUC.' : 'La cédula es válida, pero el SRI no tiene registros de esta persona (ni RUC ni nombre).'}>
             <div className={`perfil ${persona.esContribuyente ? '' : 'sin-ruc'}`}>
-              <div className="avatar">{persona.esContribuyente ? iniciales(c.razonSocial) : '🪪'}</div>
+              <div className="avatar">{nombre ? iniciales(nombre) : '🪪'}</div>
               <div className="perfil-info">
-                <h3>{persona.esContribuyente ? c.razonSocial : `Cédula ${persona.cedula}`}</h3>
+                <h3>{nombre ?? `Cédula ${persona.cedula}`}</h3>
                 <div className="chips">
                   {persona.esContribuyente ? (
                     <>
@@ -298,6 +301,7 @@ export default function App() {
                   ) : (
                     <>
                       <span className="chip chip-azul">✔ Cédula válida</span>
+                      {persona.persona && <span className="chip chip-verde">👤 Persona natural</span>}
                       <span className="chip chip-ambar">Sin RUC · no es contribuyente</span>
                     </>
                   )}
@@ -307,6 +311,7 @@ export default function App() {
             <div className="grid">
               {persona.ruc && <Dato icon="🆔" label="RUC" value={persona.ruc} />}
               <Dato icon="🪪" label="Cédula" value={persona.cedula} />
+              {persona.persona && <Dato icon="👤" label="Nombre según cédula (SRI)" value={persona.persona.nombreCompleto} />}
               <Dato icon="✉️" label="Correo" value={persona.email} />
               {c && <Dato icon="💼" label="Actividad económica" value={c.actividadEconomicaPrincipal} />}
               {c && <Dato icon="📒" label="Obligado a llevar contabilidad" value={c.obligadoLlevarContabilidad} />}

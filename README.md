@@ -15,7 +15,7 @@ Sistema web que:
 | Front end | React 18 + Vite | [`frontend/`](frontend) |
 | Microservicio SRI | Java 21, Spring Boot 3.3 | [`backend/sri-service/`](backend/sri-service) |
 | Microservicio ANT | Java 21, Spring Boot 3.3, Resilience4j, Jsoup | [`backend/ant-service/`](backend/ant-service) |
-| Caché Cloud | Redis (Redis Cloud / Azure Cache for Redis / Upstash) | – |
+| Caché Cloud | Redis en Upstash, usado por **los dos** microservicios (ANT: patrón de resiliencia; SRI: `@Cacheable`, 6 h) | – |
 
 ## Arquitectura C4
 
@@ -45,6 +45,8 @@ Modelo en **IcePanel** (los cuatro diagramas son vistas del mismo modelo, de lo 
 | **Docker Compose** para levantar todo con un comando | [`docker-compose.yml`](docker-compose.yml) |
 | **Modo demostración**: simulador de la ANT (datos marcados como simulados) con interruptor para simular su caída y ver el respaldo desde Redis | Botón 🧪 en la web · `POST /api/ant/demo` |
 | **Cédula o RUC** con validación del dígito verificador (módulo 10) | `Identificacion.java` |
+| **Nombre por cédula** aunque no tenga RUC (`Persona/obtenerPorTipoIdentificacion` del SRI) | `SriClient.java` |
+| **Caché cloud también en el SRI Service** (`@Cacheable` en Redis, claves `sri:*`, TTL 6 h) | `CacheConfig.java` |
 | Notificaciones, confeti, contador animado de puntos, tema claro/oscuro, reporte en PDF y placa estilo Ecuador | Web |
 
 ### Patrón de caché (ANT Service)

@@ -1,8 +1,10 @@
 package ec.edu.c4.sri.model;
 
 /**
- * Resultado de la verificacion: el RUC existe en el catastro, es persona natural
- * y la cedula derivada (10 primeros digitos del RUC) para consultar la ANT.
+ * Resultado de la verificacion por cedula o RUC.
+ *
+ * @param persona        nombre completo por cedula (existe aunque no tenga RUC)
+ * @param contribuyente  datos del catastro del SRI (null si no es contribuyente)
  */
 public record ContribuyenteResponse(
         String ruc,
@@ -10,5 +12,6 @@ public record ContribuyenteResponse(
         String email,
         boolean esContribuyente,
         boolean esPersonaNatural,
+        PersonaRegistro persona,
         Contribuyente contribuyente
 ) { }
