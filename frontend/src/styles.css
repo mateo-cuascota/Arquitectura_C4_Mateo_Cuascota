@@ -323,7 +323,8 @@ input.mayus { text-transform: uppercase; letter-spacing: 0.12em; font-weight: 70
 .dato:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--c1, #6366f1) 45%, transparent); box-shadow: 0 10px 20px -14px var(--c1, #6366f1); }
 .dato-icon { font-size: 1.2rem; }
 .dato-label { display: block; font-size: 0.68rem; color: var(--suave); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
-.dato-valor { font-size: 0.95rem; }
+.dato-valor { font-size: 0.95rem; overflow-wrap: anywhere; }
+.dato > div { min-width: 0; }
 
 /* =========================================================== licencia */
 .licencia { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
