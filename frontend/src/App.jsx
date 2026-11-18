@@ -477,7 +477,7 @@ export default function App() {
         </div>
         <div className="enlaces">
           <a href="https://github.com/mateo-cuascota/Arquitectura_C4_Mateo_Cuascota" target="_blank" rel="noreferrer">GitHub</a>
-          <a href="https://app.icepanel.io/landscapes/ro5CkMchbD4bHcpi5HuM/versions/latest/diagrams/editor?diagram=5M5LMF8Q5X" target="_blank" rel="noreferrer">Modelo C4</a>
+          <a href="https://s.icepanel.io/rIEoRmDe7NOiiG/bx5d" target="_blank" rel="noreferrer">Modelo C4</a>
           <a href="http://localhost:8081/swagger-ui.html" target="_blank" rel="noreferrer">API SRI</a>
           <a href="http://localhost:8082/swagger-ui.html" target="_blank" rel="noreferrer">API ANT</a>
         </div>

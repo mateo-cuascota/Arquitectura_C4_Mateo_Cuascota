@@ -21,6 +21,8 @@ Sistema web que:
 
 ## Arquitectura C4
 
+**Modelo C4 en IcePanel (enlace público de lectura, no requiere cuenta): https://s.icepanel.io/rIEoRmDe7NOiiG/bx5d**
+
 Modelo en **IcePanel** (los cuatro diagramas son vistas del mismo modelo, de lo general a lo detallado):
 
 | Nivel C4 | Diagrama | Qué muestra |

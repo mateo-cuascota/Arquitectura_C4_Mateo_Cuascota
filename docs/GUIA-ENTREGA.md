@@ -58,7 +58,7 @@ Cada objeto tiene en su descripción el enlace a su carpeta o archivo en GitHub,
 3. Abrirlo en una ventana de incógnito para comprobar que se ve **sin iniciar sesión**.
 4. Pegar ese enlace en el README (sección *Arquitectura C4*) y en la entrega.
 
-> El enlace `app.icepanel.io/landscapes/...` del README **pide iniciar sesión**; el profesor necesita el enlace de *Share*.
+> ✅ Enlace público ya creado y verificado sin sesión: https://s.icepanel.io/rIEoRmDe7NOiiG/bx5d
 
 ---
 
