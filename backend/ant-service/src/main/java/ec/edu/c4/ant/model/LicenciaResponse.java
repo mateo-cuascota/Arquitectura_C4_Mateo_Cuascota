@@ -1,5 +1,8 @@
 package ec.edu.c4.ant.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.time.Duration;
 import java.time.Instant;
 
 /**
@@ -21,6 +24,12 @@ public record LicenciaResponse(
 
     public LicenciaResponse conSimulado(boolean s) {
         return new LicenciaResponse(licencia, origen, obtenidoEn, aviso, s);
+    }
+
+    /** Antiguedad del dato en segundos (cuanto hace que la ANT lo entrego). */
+    @JsonProperty("antiguedadSegundos")
+    public long antiguedadSegundos() {
+        return obtenidoEn == null ? 0 : Math.max(0, Duration.between(obtenidoEn, Instant.now()).toSeconds());
     }
 
     public enum Origen { ANT, CACHE, CACHE_RESPALDO }

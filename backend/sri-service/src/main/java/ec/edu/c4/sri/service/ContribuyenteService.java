@@ -38,14 +38,14 @@ public class ContribuyenteService {
 
         if (!sri.existePorNumeroRuc(id.ruc())) {
             if (id.ingresoRuc()) {
-                throw new NotFoundException("El RUC " + id.ruc() + " no está registrado como contribuyente en el SRI");
+                throw new NotFoundException("RUC_NO_REGISTRADO", "El RUC " + id.ruc() + " no está registrado como contribuyente en el SRI");
             }
             return new ContribuyenteResponse(null, id.cedula(), email, false, persona == null || persona.esPersonaNatural(), persona, null);
         }
         Contribuyente c = sri.obtenerPorNumeroRuc(id.ruc())
-                .orElseThrow(() -> new NotFoundException("No se encontró información del RUC " + id.ruc()));
+                .orElseThrow(() -> new NotFoundException("CONTRIBUYENTE_SIN_DATOS", "No se encontró información del RUC " + id.ruc()));
         if (!c.esPersonaNatural()) {
-            throw new BusinessRuleException("El RUC " + id.ruc() + " corresponde a " + c.tipoContribuyente()
+            throw new BusinessRuleException("NO_ES_PERSONA_NATURAL", "El RUC " + id.ruc() + " corresponde a " + c.tipoContribuyente()
                     + "; se requiere una PERSONA NATURAL");
         }
         return new ContribuyenteResponse(id.ruc(), id.cedula(), email, true, true, persona, c);

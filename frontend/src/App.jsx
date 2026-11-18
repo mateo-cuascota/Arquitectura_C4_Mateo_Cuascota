@@ -4,8 +4,9 @@ import {
 } from './api.js';
 import {
   BarraEstado, Confeti, Dato, FlujoCache, FondoAurora, GaugePuntos, PanelDemo, Placa, Skeleton, Stepper,
-  Tarjeta, Toasts, formatearFecha, iniciales,
+  Tarjeta, Toasts, duracionLegible, formatearFecha, iniciales, tiempoTranscurrido,
 } from './componentes.jsx';
+import { PanelUsabilidad } from './usabilidad.jsx';
 
 const ORIGEN = {
   ANT: { label: 'En vivo desde la ANT', icon: '⚡', clase: 'ok' },
@@ -198,6 +199,7 @@ export default function App() {
       <Confeti disparo={confeti} />
       <Toasts lista={toasts} cerrar={(id) => setToasts((t) => t.filter((x) => x.id !== id))} />
       <PanelDemo ant={estado.ant} cambiar={cambiarDemo} />
+      <PanelUsabilidad />
 
       <header className="hero">
         <div className="hero-bandera" />
@@ -348,8 +350,28 @@ export default function App() {
                       <div><strong>{licencia.licencia.totalCitaciones}</strong><span>citaciones</span></div>
                       <div><strong>{licencia.licencia.puntosDescontados ?? '—'}</strong><span>puntos perdidos</span></div>
                     </div>
-                    <small className="obtenido">🕒 {new Date(licencia.obtenidoEn).toLocaleString()}</small>
+                    <small className="obtenido">
+                      🕒 Dato de la ANT {tiempoTranscurrido(licencia.antiguedadSegundos)} · {new Date(licencia.obtenidoEn).toLocaleString()}
+                    </small>
                   </div>
+                </div>
+              )}
+
+              {!cargandoLicencia && licencia?.origen === 'CACHE_RESPALDO' && (
+                <div className="dato-viejo entrar">
+                  <strong>⚠️ Este dato no es reciente</strong>
+                  <span>
+                    Es la última respuesta válida que dio la ANT ({tiempoTranscurrido(licencia.antiguedadSegundos)}).
+                    Pudo haber cambiado: se actualizará solo cuando la ANT vuelva a responder.
+                  </span>
+                </div>
+              )}
+
+              {!cargandoLicencia && estado.ant && (
+                <div className="politica-cache">
+                  <span>🗄️ Copia reciente: <b>{duracionLegible(estado.ant.ttlRecienteSegundos)}</b></span>
+                  <span>🛟 Respaldo hasta: <b>{duracionLegible(estado.ant.ttlRespaldoSegundos)}</b></span>
+                  <span>🛡️ Circuit breaker: <b>60 s</b> de pausa tras fallos</span>
                 </div>
               )}
 

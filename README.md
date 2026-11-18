@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/mateo-cuascota/Arquitectura_C4_Mateo_Cuascota/actions/workflows/ci.yml/badge.svg)](https://github.com/mateo-cuascota/Arquitectura_C4_Mateo_Cuascota/actions/workflows/ci.yml)
 
+> 📘 **[Guía de entrega paso a paso](docs/GUIA-ENTREGA.md)** · 📑 [Contrato de la API](docs/api-contrato.md) · 🛟 [Caché y resiliencia (TTL justificados)](docs/cache-resiliencia.md) · 🧪 [Prueba de usabilidad](docs/prueba-usabilidad.md) · 🧩 [Modelo C4 (Mermaid)](docs/c4-model.md)
+
 Sistema web que:
 
 1. Recibe el **correo electrónico** y el **RUC** de una persona natural (o solo su **cédula**: se valida el dígito verificador y se consulta el RUC `cédula + 001`; si no tiene RUC, el flujo continúa con la licencia y el vehículo).

@@ -503,3 +503,57 @@ footer { text-align: center; color: var(--suave); font-size: 0.82rem; padding: 1
   background: var(--superficie-2); border: 1px dashed var(--borde); font-size: 0.8rem; color: var(--suave); cursor: pointer;
 }
 .consentimiento input { width: 18px; height: 18px; margin-top: 1px; flex: none; accent-color: var(--indigo); }
+
+/* =========================================================== dato no reciente y política de caché */
+.dato-viejo {
+  display: grid; gap: 4px; margin-top: 14px; padding: 12px 14px; border-radius: 14px;
+  background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.45); font-size: 0.85rem;
+}
+.dato-viejo strong { color: #b45309; }
+[data-tema="oscuro"] .dato-viejo strong { color: #fcd34d; }
+.politica-cache { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.politica-cache span { padding: 5px 10px; border-radius: 999px; font-size: 0.74rem; background: var(--superficie-2); border: 1px solid var(--borde); }
+
+/* =========================================================== panel de prueba de usabilidad */
+.panel-usabilidad { position: fixed; right: 18px; bottom: 18px; z-index: 45; }
+.panel-usabilidad-boton {
+  border: 0; cursor: pointer; padding: 12px 18px; border-radius: 999px; font: inherit; font-weight: 800; font-size: 0.88rem;
+  color: #fff; background: linear-gradient(135deg, #0891b2, #2563eb); box-shadow: 0 12px 28px -10px rgba(37, 99, 235, 0.8);
+  font-variant-numeric: tabular-nums;
+}
+.panel-usabilidad-cuerpo {
+  position: absolute; right: 0; bottom: 58px; width: min(460px, calc(100vw - 36px)); max-height: 78vh; overflow-y: auto;
+  padding: 18px; border-radius: 20px; background: var(--superficie); backdrop-filter: blur(18px);
+  border: 1px solid var(--borde); box-shadow: var(--sombra); display: grid; gap: 10px;
+}
+.pu-cabecera { display: flex; justify-content: space-between; align-items: center; }
+.pu-cabecera h3 { margin: 0; }
+.pu-cerrar { border: 0; background: none; font-size: 1.1rem; cursor: pointer; color: var(--suave); }
+.pu-ayuda { margin: 0; font-size: 0.8rem; color: var(--suave); }
+.pu-fila { display: grid; grid-template-columns: 1fr 150px; gap: 8px; }
+.panel-usabilidad input, .panel-usabilidad select, .panel-usabilidad textarea {
+  padding: 8px 10px; border-radius: 10px; font-size: 0.85rem; border: 1px solid var(--borde); background: var(--superficie-2); color: var(--texto); font: inherit;
+}
+.panel-usabilidad textarea { min-height: 60px; resize: vertical; }
+.pu-tareas { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.pu-tarea { padding: 10px 12px; border-radius: 14px; border: 1px solid var(--borde); background: var(--superficie-2); }
+.pu-tarea.corriendo { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+.pu-tarea.exito { border-color: #22c55e; } .pu-tarea.ayuda { border-color: #f59e0b; } .pu-tarea.fracaso { border-color: #ef4444; }
+.pu-titulo { display: flex; justify-content: space-between; font-size: 0.9rem; }
+.pu-tiempo { font-variant-numeric: tabular-nums; font-weight: 700; }
+.pu-consigna { margin: 4px 0 2px; font-size: 0.82rem; font-style: italic; }
+.pu-exito { margin: 0 0 6px; font-size: 0.74rem; color: var(--suave); }
+.pu-botones { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pu-botones button, .pu-acciones button {
+  border: 1px solid var(--borde); background: var(--superficie); color: var(--texto); border-radius: 10px; padding: 6px 10px;
+  font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+}
+.pu-botones button.ok { background: #16a34a; color: #fff; border-color: transparent; }
+.pu-botones button.ayuda { background: #f59e0b; color: #fff; border-color: transparent; }
+.pu-botones button.mal { background: #dc2626; color: #fff; border-color: transparent; }
+.pu-resumen { font-size: 0.75rem; color: var(--suave); }
+.pu-extra { display: grid; grid-template-columns: auto 1fr; gap: 8px; margin-top: 8px; align-items: center; }
+.pu-extra label { font-size: 0.75rem; display: flex; gap: 6px; align-items: center; }
+.pu-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.pu-acciones button.principal { background: linear-gradient(135deg, #0891b2, #2563eb); color: #fff; border-color: transparent; }
+@media print { .panel-usabilidad { display: none !important; } }

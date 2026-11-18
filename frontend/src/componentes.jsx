@@ -8,6 +8,25 @@ export function formatearFecha(valor) {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : valor;
 }
 
+export function tiempoTranscurrido(segundos) {
+  if (segundos === null || segundos === undefined) return '';
+  if (segundos < 60) return `hace ${segundos} s`;
+  const min = Math.floor(segundos / 60);
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `hace ${h} h ${min % 60} min`;
+  const d = Math.floor(h / 24);
+  return `hace ${d} día${d > 1 ? 's' : ''} ${h % 24} h`;
+}
+
+export function duracionLegible(segundos) {
+  if (!segundos) return '—';
+  if (segundos < 60) return `${segundos} s`;
+  if (segundos < 3600) return `${Math.round(segundos / 60)} min`;
+  if (segundos < 86400) return `${Math.round(segundos / 3600)} h`;
+  return `${Math.round(segundos / 86400)} días`;
+}
+
 export function iniciales(nombre = '') {
   const p = nombre.trim().split(/\s+/).filter(Boolean);
   if (p.length === 0) return '?';

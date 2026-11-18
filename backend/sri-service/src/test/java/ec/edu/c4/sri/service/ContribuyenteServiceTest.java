@@ -89,6 +89,13 @@ class ContribuyenteServiceTest {
     }
 
     @Test
+    void rucDeSociedadNoEsPersonaNatural() {
+        assertThatThrownBy(() -> service.verificar("1790016919001", "a@b.com"))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("SOCIEDAD");
+    }
+
+    @Test
     void cedulaInvalidaFalla() {
         assertThatThrownBy(() -> service.verificar("1726617748", null)).isInstanceOf(ValidacionException.class);
     }

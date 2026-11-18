@@ -7,6 +7,7 @@ import ec.edu.c4.sri.service.VehiculoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,7 +37,8 @@ public class SriController {
             @PathVariable
             @Pattern(regexp = "\\d{10}|\\d{10}001", message = "Ingresa una cédula de 10 dígitos o un RUC de 13 dígitos terminado en 001")
             String identificacion,
-            @RequestParam(required = false)
+            @RequestParam
+            @NotBlank(message = "El correo electrónico es obligatorio")
             @Email(message = "Correo electrónico inválido")
             String email,
             @RequestParam(defaultValue = "false") boolean consentimiento) {

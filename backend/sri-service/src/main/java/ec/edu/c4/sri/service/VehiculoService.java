@@ -16,6 +16,6 @@ public class VehiculoService {
     public Vehiculo obtener(String placa) {
         String normalizada = placa.trim().toUpperCase().replace("-", "");
         return sri.obtenerVehiculo(normalizada)
-                .orElseThrow(() -> new NotFoundException("No se encontró un vehículo con placa " + normalizada));
+                .orElseThrow(() -> new NotFoundException("VEHICULO_NO_ENCONTRADO", "No se encontró un vehículo con placa " + normalizada));
     }
 }

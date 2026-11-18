@@ -25,8 +25,14 @@ public class EstadoController {
     private final CircuitBreakerRegistry circuitos;
     private final StringRedisTemplate redis;
     private final ModoDemo modo;
+    private final java.time.Duration ttlReciente;
+    private final java.time.Duration ttlRespaldo;
 
-    public EstadoController(AntMonitor monitor, CircuitBreakerRegistry circuitos, StringRedisTemplate redis, ModoDemo modo) {
+    public EstadoController(AntMonitor monitor, CircuitBreakerRegistry circuitos, StringRedisTemplate redis, ModoDemo modo,
+                            @org.springframework.beans.factory.annotation.Value("${ant.cache.fresh-ttl:PT30M}") java.time.Duration ttlReciente,
+                            @org.springframework.beans.factory.annotation.Value("${ant.cache.ttl:P7D}") java.time.Duration ttlRespaldo) {
+        this.ttlReciente = ttlReciente;
+        this.ttlRespaldo = ttlRespaldo;
         this.modo = modo;
         this.monitor = monitor;
         this.circuitos = circuitos;
@@ -48,7 +54,9 @@ public class EstadoController {
             String ultimoError,
             boolean modoDemo,
             boolean antCaidaSimulada,
-            long segundosParaReintentarAnt
+            long segundosParaReintentarAnt,
+            long ttlRecienteSegundos,
+            long ttlRespaldoSegundos
     ) { }
 
     /** Debe coincidir con resilience4j.circuitbreaker.instances.ant.wait-duration-in-open-state. */
@@ -80,7 +88,8 @@ public class EstadoController {
                 redisOk, enCache, pendientes,
                 monitor.respuestasAnt(), monitor.respuestasCache(), monitor.respuestasRespaldo(), monitor.fallosAnt(),
                 monitor.ultimaRespuestaOk(), monitor.ultimoFallo(), monitor.ultimoError(),
-                modo.activo(), modo.antCaida(), segundosParaReintentar(cb));
+                modo.activo(), modo.antCaida(), segundosParaReintentar(cb),
+                modo.activo() ? 10 : ttlReciente.toSeconds(), ttlRespaldo.toSeconds());
     }
 
     /** Segundos que faltan para que el circuito abierto pase a semiabierto y vuelva a probar la ANT. */
