@@ -1,5 +1,6 @@
 package ec.edu.c4.sri.service;
 
+import ec.edu.c4.sri.client.RegistroCivilClient;
 import ec.edu.c4.sri.client.SriClient;
 import ec.edu.c4.sri.model.Contribuyente;
 import ec.edu.c4.sri.model.PersonaRegistro;
@@ -16,12 +17,14 @@ import static org.mockito.Mockito.when;
 class ContribuyenteServiceTest {
 
     private SriClient sri;
+    private RegistroCivilClient registroCivil;
     private ContribuyenteService service;
 
     @BeforeEach
     void setUp() {
         sri = mock(SriClient.class);
-        service = new ContribuyenteService(sri);
+        registroCivil = mock(RegistroCivilClient.class);
+        service = new ContribuyenteService(sri, registroCivil);
     }
 
     private static Contribuyente persona(String ruc, String tipo) {
@@ -61,6 +64,21 @@ class ContribuyenteServiceTest {
         assertThat(r.esContribuyente()).isFalse();
         assertThat(r.cedula()).isEqualTo("1710034065");
         assertThat(r.contribuyente()).isNull();
+    }
+
+    @Test
+    void siElSriNoConoceLaCedulaUsaElRegistroCivilConConsentimiento() {
+        when(sri.existePorNumeroRuc("1710034065001")).thenReturn(false);
+        when(sri.obtenerPersonaPorCedula("1710034065")).thenReturn(Optional.empty());
+        when(registroCivil.buscarPorCedula("1710034065"))
+                .thenReturn(Optional.of(new PersonaRegistro("1710034065", "PEREZ LOPEZ ANA", "NAT", RegistroCivilClient.FUENTE)));
+
+        var sinConsentimiento = service.verificar("1710034065", "a@b.com", false);
+        var conConsentimiento = service.verificar("1710034065", "a@b.com", true);
+
+        assertThat(sinConsentimiento.persona()).isNull();
+        assertThat(conConsentimiento.persona().fuente()).isEqualTo(RegistroCivilClient.FUENTE);
+        assertThat(conConsentimiento.persona().nombreCompleto()).isEqualTo("PEREZ LOPEZ ANA");
     }
 
     @Test

@@ -37,6 +37,7 @@ public class CacheConfig implements CachingConfigurer {
                 .withCacheConfiguration("sri-existe-ruc", config(mapper, Boolean.class, ttl))
                 .withCacheConfiguration("sri-contribuyente", config(mapper, Contribuyente.class, ttl))
                 .withCacheConfiguration("sri-persona", config(mapper, PersonaRegistro.class, ttl))
+                .withCacheConfiguration("sri-registro-civil", config(mapper, PersonaRegistro.class, Duration.ofDays(7)))
                 .withCacheConfiguration("sri-vehiculo", config(mapper, Vehiculo.class, ttl));
     }
 

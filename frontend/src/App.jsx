@@ -23,6 +23,7 @@ export default function App() {
   const [tipo, setTipo] = useState('cedula');
   const [identificacion, setIdentificacion] = useState('');
   const [placa, setPlaca] = useState('');
+  const [consentimiento, setConsentimiento] = useState(false);
 
   const [persona, setPersona] = useState(null);
   const [vehiculo, setVehiculo] = useState(null);
@@ -129,7 +130,7 @@ export default function App() {
     setErrorVehiculo('');
     setCargando('persona');
     try {
-      const data = await verificarContribuyente(identificacion.trim(), email.trim());
+      const data = await verificarContribuyente(identificacion.trim(), email.trim(), consentimiento);
       setPersona(data);
       if (data.esContribuyente) {
         setConfeti(Date.now());
@@ -250,7 +251,7 @@ export default function App() {
             </div>
           </div>
 
-          <form onSubmit={onVerificar} className="form">
+          <form id="form-consulta" onSubmit={onVerificar} className="form">
             <label className="campo">
               <span>Correo electrónico</span>
               <div className="input-icono">
@@ -275,6 +276,13 @@ export default function App() {
               {cargando === 'persona' ? <><span className="spinner" /> Verificando…</> : <>Consultar <span className="flechita">→</span></>}
             </button>
           </form>
+          <label className="consentimiento">
+            <input type="checkbox" form="form-consulta" required checked={consentimiento} onChange={(e) => setConsentimiento(e.target.checked)} />
+            <span>
+              Soy el titular de esta cédula (o tengo su autorización) y acepto que se consulten sus datos en el SRI,
+              el Registro Civil y la ANT para esta consulta (Ley Orgánica de Protección de Datos Personales).
+            </span>
+          </label>
           {error && <div className="alerta error entrar">⛔ {error}</div>}
         </section>
 
@@ -286,7 +294,8 @@ export default function App() {
           <Tarjeta paso={2} icon="🧾" acento={persona.esContribuyente ? 'verde' : 'cian'}
                    titulo={persona.esContribuyente ? 'Contribuyente verificado' : 'Cédula verificada'}
                    subtitulo={persona.esContribuyente ? 'Información del catastro del SRI.' : persona.persona
-                     ? 'Datos obtenidos por cédula del SRI; no registra RUC.' : 'La cédula es válida, pero el SRI no tiene registros de esta persona (ni RUC ni nombre).'}>
+                     ? `Datos obtenidos por cédula (${persona.persona.fuente ?? 'SRI'}); no registra RUC.`
+                     : 'La cédula es válida, pero ni el SRI ni el Registro Civil devolvieron datos (configura DIDIT_API_KEY para consultar el Registro Civil).'}>
             <div className={`perfil ${persona.esContribuyente ? '' : 'sin-ruc'}`}>
               <div className="avatar">{nombre ? iniciales(nombre) : '🪪'}</div>
               <div className="perfil-info">
@@ -311,7 +320,7 @@ export default function App() {
             <div className="grid">
               {persona.ruc && <Dato icon="🆔" label="RUC" value={persona.ruc} />}
               <Dato icon="🪪" label="Cédula" value={persona.cedula} />
-              {persona.persona && <Dato icon="👤" label="Nombre según cédula (SRI)" value={persona.persona.nombreCompleto} />}
+              {persona.persona && <Dato icon="👤" label={`Nombre según cédula (${persona.persona.fuente ?? 'SRI'})`} value={persona.persona.nombreCompleto} />}
               <Dato icon="✉️" label="Correo" value={persona.email} />
               {c && <Dato icon="💼" label="Actividad económica" value={c.actividadEconomicaPrincipal} />}
               {c && <Dato icon="📒" label="Obligado a llevar contabilidad" value={c.obligadoLlevarContabilidad} />}

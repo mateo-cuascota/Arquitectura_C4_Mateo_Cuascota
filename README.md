@@ -46,6 +46,7 @@ Modelo en **IcePanel** (los cuatro diagramas son vistas del mismo modelo, de lo 
 | **Modo demostración**: simulador de la ANT (datos marcados como simulados) con interruptor para simular su caída y ver el respaldo desde Redis | Botón 🧪 en la web · `POST /api/ant/demo` |
 | **Cédula o RUC** con validación del dígito verificador (módulo 10) | `Identificacion.java` |
 | **Nombre por cédula** aunque no tenga RUC (`Persona/obtenerPorTipoIdentificacion` del SRI) | `SriClient.java` |
+| **Registro Civil vía Didit** (opcional) para cédulas que el SRI no conoce; solo con `DIDIT_API_KEY` y consentimiento del titular | `RegistroCivilClient.java` |
 | **Caché cloud también en el SRI Service** (`@Cacheable` en Redis, claves `sri:*`, TTL 6 h) | `CacheConfig.java` |
 | Notificaciones, confeti, contador animado de puntos, tema claro/oscuro, reporte en PDF y placa estilo Ecuador | Web |
 
@@ -176,6 +177,16 @@ cd backend
 ```
 
 `LicenciaServiceTest` (4 casos del patrón) y `FlujoCacheAntTest` (flujo completo con la ANT simulada por HTTP, cola de pendientes y reintento). Las mismas pruebas corren en GitHub Actions en cada push.
+
+## Datos por cédula (personas sin RUC)
+
+1. Primero se usa el SRI: `Persona/obtenerPorTipoIdentificacion` devuelve el nombre de cualquier persona que el SRI conozca, aunque no tenga RUC.
+2. Si el SRI no la conoce (responde 204), se puede consultar el **Registro Civil a través de [Didit](https://docs.didit.me/api-reference/database-validation/ecuador/cedula)** (servicio `ecu_cedula`, 500 consultas gratis al mes):
+   - crea una cuenta en https://business.didit.me, copia tu API key y ponla en `.env` como `DIDIT_API_KEY=...`;
+   - solo se consulta si el usuario marca el **consentimiento** del formulario (Ley Orgánica de Protección de Datos Personales).
+3. La vía oficial directa es el web service demográfico del Registro Civil, que exige un convenio de interoperabilidad.
+
+> No se consulta el **propietario de un vehículo por placa**: no existe una fuente oficial pública y los servicios que lo ofrecen no son oficiales. Revelar el dueño de cualquier placa permitiría identificar a desconocidos, así que el sistema solo muestra los datos del vehículo que entrega el SRI.
 
 ## Modo demostración (para presentar)
 

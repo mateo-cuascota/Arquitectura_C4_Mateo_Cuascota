@@ -20,6 +20,12 @@ sri:
   cache:
     ttl: ${SRI_CACHE_TTL:PT6H}   # respuestas del SRI guardadas en Redis
 
+# Registro Civil via Didit (opcional): nombre por cedula para personas sin RUC.
+# Crea una cuenta en https://business.didit.me y pon DIDIT_API_KEY en el .env (500 consultas gratis/mes).
+didit:
+  base-url: https://verification.didit.me
+  api-key: ${DIDIT_API_KEY:}
+
 app:
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}

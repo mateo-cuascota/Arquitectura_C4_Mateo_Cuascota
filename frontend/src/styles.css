@@ -496,3 +496,10 @@ footer { text-align: center; color: var(--suave); font-size: 0.82rem; padding: 1
   .entrar { animation: none; }
   .impreso { display: block; margin-bottom: 4px; }
 }
+
+/* =========================================================== consentimiento */
+.consentimiento {
+  display: flex; gap: 10px; align-items: flex-start; margin-top: 30px; padding: 12px 14px; border-radius: 14px;
+  background: var(--superficie-2); border: 1px dashed var(--borde); font-size: 0.8rem; color: var(--suave); cursor: pointer;
+}
+.consentimiento input { width: 18px; height: 18px; margin-top: 1px; flex: none; accent-color: var(--indigo); }

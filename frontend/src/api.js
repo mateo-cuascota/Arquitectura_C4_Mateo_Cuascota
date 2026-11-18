@@ -12,8 +12,8 @@ async function getJson(url, opciones) {
 }
 
 /** Acepta cédula (10 dígitos) o RUC de persona natural (13 dígitos). */
-export function verificarContribuyente(identificacion, email) {
-  const q = new URLSearchParams({ email });
+export function verificarContribuyente(identificacion, email, consentimiento = false) {
+  const q = new URLSearchParams({ email, consentimiento: String(consentimiento) });
   return getJson(`${SRI_URL}/api/sri/contribuyentes/${encodeURIComponent(identificacion)}?${q}`);
 }
 

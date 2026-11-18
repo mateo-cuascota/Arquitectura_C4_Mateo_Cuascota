@@ -38,8 +38,9 @@ public class SriController {
             String identificacion,
             @RequestParam(required = false)
             @Email(message = "Correo electrónico inválido")
-            String email) {
-        return contribuyentes.verificar(identificacion, email);
+            String email,
+            @RequestParam(defaultValue = "false") boolean consentimiento) {
+        return contribuyentes.verificar(identificacion, email, consentimiento);
     }
 
     /** GET /api/sri/vehiculos/{placa} */
